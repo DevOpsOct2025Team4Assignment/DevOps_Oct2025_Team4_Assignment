@@ -1,0 +1,44 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm run build
+      - run: ./deploy.sh
+
+  notify-success:
+    if: success()
+    needs: deploy
+    uses: ./.github/workflows/reusable-notify.yml
+    with:
+      channel: email
+      status: success
+      event_type: deploy
+      environment: production
+    secrets:
+      EMAIL_USER: ${{ secrets.EMAIL_USER }}
+      EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+      EMAIL_TO:   ${{ secrets.EMAIL_TO }}
+
+  notify-failure:
+    if: failure()
+    needs: deploy
+    uses: ./.github/workflows/reusable-notify.yml
+    with:
+      channel: email
+      status: failure
+      event_type: deploy
+      environment: production
+    secrets:
+      EMAIL_USER: ${{ secrets.EMAIL_USER }}
+      EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+      EMAIL_TO:   ${{ secrets.EMAIL_TO }}

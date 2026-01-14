@@ -1,0 +1,40 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: npm ci
+      - run: npm test
+      - run: npm run security
+      - run: npm run build
+
+  notify-success:
+    if: success()
+    needs: ci
+    uses: ./.github/workflows/reusable-notify.yml
+    with:
+      channel: discord
+      status: success
+      event_type: ci
+    secrets:
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+  notify-failure:
+    if: failure()
+    needs: ci
+    uses: ./.github/workflows/reusable-notify.yml
+    with:
+      channel: discord
+      status: failure
+      event_type: ci
+    secrets:
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
