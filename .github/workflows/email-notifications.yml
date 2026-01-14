@@ -1,0 +1,84 @@
+name: CI Pipeline Email
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "**" ]
+
+jobs:
+  # Job 1: Build and Environment Check
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          echo "✅ Environment ready and dependencies installed."
+
+  # Job 2: Deployment
+  deploy:
+    runs-on: ubuntu-latest
+    needs: ci
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Execute Deployment
+        run: |
+          echo "🚀 Deploying Python Application..."
+          # Your deployment commands here
+          echo "✅ Deployment logic completed."
+
+  # Job 3: Notification (Pure Python Standard Library)
+  notify:
+    runs-on: ubuntu-latest
+    needs: [ci]
+    if: always() 
+    steps:
+      - name: Python Email Dispatcher
+        env:
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          CI_RESULT: ${{ needs.ci.result }}
+        run: |
+          python3 - << 'EOF'
+          import smtplib
+          import os
+          from email.message import EmailMessage
+
+          user = os.getenv('EMAIL_USER')
+          password = os.getenv('EMAIL_PASS')
+          recipient = os.getenv('EMAIL_TO')
+          status = os.getenv('CI_RESULT')
+          repo = os.getenv('GITHUB_REPOSITORY')
+          run_id = os.getenv('GITHUB_RUN_ID')
+
+          if not all([user, password, recipient]):
+              print("❌ Error: Missing secrets.")
+              exit(1)
+
+          icon = "✅" if status == "success" else "❌"
+          msg = EmailMessage()
+          msg['Subject'] = f"{icon} Python CI Alert: {repo}"
+          msg['From'] = user
+          msg['To'] = recipient
+          msg.set_content(f"Status: {status.upper()}\nLogs: https://github.com/{repo}/actions/runs/{run_id}")
+
+          try:
+              with smtplib.SMTP('smtp.gmail.com', 587) as server:
+                  server.starttls()
+                  server.login(user, password)
+                  server.send_message(msg)
+              print("✅ Notification sent.")
+          except Exception as e:
+              print(f"❌ Error: {e}")
+          EOF
