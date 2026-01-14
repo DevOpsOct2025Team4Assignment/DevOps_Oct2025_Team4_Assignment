@@ -1,0 +1,52 @@
+import urllib.request
+import json
+import os
+
+def send_discord():
+    webhook_url = os.getenv('DISCORD_WEBHOOK')
+    status = os.getenv('CI_RESULT')
+    role_id = os.getenv('DEV_ROLE_ID')
+    repo = os.getenv('GITHUB_REPOSITORY')
+    branch = os.getenv('GITHUB_REF_NAME')
+    run_id = os.getenv('GITHUB_RUN_ID')
+    sha = os.getenv('COMMIT_SHA', '0000000')[:7]
+    msg = os.getenv('COMMIT_MSG', 'Manual Update').split('\n')[0]
+
+    if not webhook_url:
+        print("❌ Error: Webhook secret is missing.")
+        return
+
+    # Logic for Pass/Fail styling
+    if status == 'success':
+        header = f"✅ **Tests passed in** `{branch}`"
+        footer = "View logs"
+        color = 3066993 # Green
+    else:
+        header = f"🚨 **Tests failed in** `{branch}`"
+        footer = f"View logs <@&{role_id}>"
+        color = 15158332 # Red
+
+    # All content inside the description field of the embed
+    full_description = f"{header}\n\n`{sha}` {msg}\n\n{footer}\n\n[View Details on GitHub](https://github.com/{repo}/actions/runs/{run_id})"
+
+    payload = {
+        "embeds": [{
+            "description": full_description,
+            "color": color
+        }]
+    }
+
+    req = urllib.request.Request(
+        webhook_url, 
+        data=json.dumps(payload).encode('utf-8'), 
+        headers={'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}
+    )
+    
+    try:
+        with urllib.request.urlopen(req) as response:
+            print(f"Notification Sent! Status: {response.status}")
+    except Exception as e:
+        print(f"❌ Failed to send: {e}")
+
+if __name__ == "__main__":
+    send_discord()

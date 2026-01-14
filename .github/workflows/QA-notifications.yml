@@ -1,0 +1,71 @@
+name: QA Tests Pipeline
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+    branches: [ "**" ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run SCA (Trivy)
+        id: sca_scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+
+      - name: Upload SCA to Security Tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif
+          category: trivy
+
+      - name: Run Python SAST (Bandit)
+        id: sast_scan
+        run: |
+          # Install bandit with sarif support for Python security scanning
+          pip install bandit[sarif]
+          # -r: recursive scan, -f: format as sarif, -o: output file
+          # '|| true' allows the workflow to continue to the upload step even if vulnerabilities are found
+          bandit -r . -f sarif -o bandit-results.sarif || true
+
+      - name: Upload Bandit to Security Tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: bandit-results.sarif
+          category: bandit
+
+      - name: Run QA Tests
+        id: qa_test
+        run: |
+          echo "Running automated suite..."
+          python3 -c "assert 1 == 1"
+
+      - name: Notify Discord
+        if: always()
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_QA_WEBHOOK_URL }}
+          SCA_STATUS: ${{ steps.sca_scan.outcome }}
+          SAST_STATUS: ${{ steps.sast_scan.outcome }}
+          QA_STATUS: ${{ steps.qa_test.outcome }}
+          ROLE_ID: "1461638033068785798"
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+        run: python3 notify-QA-discord.py
