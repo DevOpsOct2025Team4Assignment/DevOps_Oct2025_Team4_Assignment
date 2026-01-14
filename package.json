@@ -1,0 +1,23 @@
+{
+  "name": "devops_oct2025_team4_assignment",
+  "version": "1.0.0",
+  "description": "��#\u0000 \u0000D\u0000e\u0000v\u0000O\u0000p\u0000s\u0000_\u0000O\u0000c\u0000t\u00002\u00000\u00002\u00005\u0000_\u0000T\u0000e\u0000a\u0000m\u00004\u0000_\u0000A\u0000s\u0000s\u0000i\u0000g\u0000n\u0000m\u0000e\u0000n\u0000t\u0000\r\u0000 \u0000",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DevOpsOct2025Team4Assignment/DevOps_Oct2025_Team4_Assignment.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/DevOpsOct2025Team4Assignment/DevOps_Oct2025_Team4_Assignment/issues"
+  },
+  "homepage": "https://github.com/DevOpsOct2025Team4Assignment/DevOps_Oct2025_Team4_Assignment#readme",
+  "devDependencies": {
+    "jest": "^30.2.0"
+  }
+}
