@@ -14,10 +14,6 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/DevOpsOct2025Team4Assignment/DevOps_Oct2025_Team4_Assignment/issues"
-  },
-  "homepage": "https://github.com/DevOpsOct2025Team4Assignment/DevOps_Oct2025_Team4_Assignment#readme",
   "devDependencies": {
     "jest": "^30.2.0"
   }
