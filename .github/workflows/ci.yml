@@ -8,8 +8,6 @@ on:
 jobs:
   ci:
     runs-on: ubuntu-latest
-    outputs:
-      status: ${{ job.status }}
     steps:
       - uses: actions/checkout@v4
       - name: Setup Node.js
@@ -46,51 +44,62 @@ jobs:
             echo "⚠️ No deploy.sh found. Skipping."
           fi
 
-  # Combined Notification Job
   notify:
     runs-on: ubuntu-latest
     needs: [ci, deploy]
-    # This ensures the job runs even if a previous job failed
-    if: always() 
+    if: always() # This ensures an email is sent even if CI fails
     steps:
       - name: Send Email Notification
         env:
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
-          # Determine status logic
-          CI_STATUS: ${{ needs.ci.result }}
-          DEPLOY_STATUS: ${{ needs.deploy.result }}
+          CI_RESULT: ${{ needs.ci.result }}
+          DEPLOY_RESULT: ${{ needs.deploy.result }}
         run: |
+          # Validate secrets are present
+          if [ -z "$EMAIL_USER" ] || [ -z "$EMAIL_PASS" ]; then
+            echo "❌ Error: EMAIL_USER or EMAIL_PASS secrets are missing in GitHub."
+            exit 1
+          fi
+
           mkdir -p /tmp/notify && cd /tmp/notify
           npm init -y >/dev/null
           npm install nodemailer --silent
+          
           cat > notify.js << 'EOF'
           const nodemailer = require('nodemailer');
           const transporter = nodemailer.createTransport({
             host: 'smtp.gmail.com',
             port: 587,
             secure: false,
-            auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+            auth: { 
+              user: process.env.EMAIL_USER, 
+              pass: process.env.EMAIL_PASS 
+            }
           });
 
-          const ciStatus = process.env.CI_STATUS;
-          const deployStatus = process.env.DEPLOY_STATUS;
-          const branch = process.env.GITHUB_REF_NAME;
+          const statusEmoji = process.env.CI_RESULT === 'success' ? '✅' : '❌';
+          const subject = `${statusEmoji} Pipeline Status: CI ${process.env.CI_RESULT}`;
           
-          let subject = `Pipeline Status: CI=${ciStatus}`;
-          if (deployStatus !== 'skipped') subject += ` / Deploy=${deployStatus}`;
+          const text = `
+          Workflow Result:
+          ----------------
+          CI Job: ${process.env.CI_RESULT}
+          Deploy Job: ${process.env.DEPLOY_RESULT || 'Skipped'}
           
-          const text = `Workflow: ${process.env.GITHUB_RUN_ID}\nBranch: ${branch}\nCI: ${ciStatus}\nDeploy: ${deployStatus}`;
+          Branch: ${process.env.GITHUB_REF_NAME}
+          Commit: ${process.env.GITHUB_SHA}
+          Logs: ${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}
+          `;
 
           transporter.sendMail({
             from: process.env.EMAIL_USER,
             to: process.env.EMAIL_TO,
             subject: subject,
             text: text
-          }).then(() => console.log('Email sent')).catch(err => {
-            console.error(err);
-            process.exit(1);
-          });
+          }).then(() => console.log('✅ Email sent'))
+            .catch(err => { console.error('❌ SMTP Error:', err.message); process.exit(1); });
           EOF
+          
           node notify.js

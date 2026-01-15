@@ -2,87 +2,40 @@ name: CI Pipeline
 
 on:
   push:
-    branches: ["**"]
+    branches: [ "main" ]
   pull_request:
 
 jobs:
   ci:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-      - name: Install & Build
-        # This will now work once you add the script to package.json
-        run: |
-          npm ci
-          npm run build
 
-  deploy:
-    runs-on: ubuntu-latest
-    needs: ci
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    environment: production
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-      - name: Install & Build
-        run: |
-          npm ci
-          npm run build
-      - name: Run deployment script
-        run: |
-          if [ -f "./deploy.sh" ]; then
-            chmod +x ./deploy.sh
-            ./deploy.sh
-          else
-            echo "⚠️ No deploy.sh found."
-          fi
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-  notify:
-    runs-on: ubuntu-latest
-    needs: [ci, deploy]
-    if: always() # Runs even if CI or Deploy fails
-    steps:
-      - name: Send Email Notification
+      - name: Run basic check
+        run: echo "CI is running..."
+
+      - name: Notify Discord - Success
+        if: success()
+        uses: Ilshidur/action-discord@master
         env:
-          EMAIL_USER: ${{ secrets.EMAIL_USER }}
-          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
-          EMAIL_TO: ${{ secrets.EMAIL_TO }}
-          CI_RESULT: ${{ needs.ci.result }}
-          DEPLOY_RESULT: ${{ needs.deploy.result }}
-        run: |
-          # 1. Check if secrets exist before running to avoid EAUTH errors
-          if [ -z "$EMAIL_USER" ] || [ -z "$EMAIL_PASS" ]; then
-            echo "❌ Error: EMAIL_USER or EMAIL_PASS secrets are missing."
-            exit 1
-          fi
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        with:
+          args: |
+            ✅ CI SUCCESS
+            Repo: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
 
-          mkdir -p /tmp/notify && cd /tmp/notify
-          npm init -y >/dev/null
-          npm install nodemailer --silent
-          cat > notify.js << 'EOF'
-          const nodemailer = require('nodemailer');
-          const transporter = nodemailer.createTransport({
-            host: 'smtp.gmail.com',
-            port: 587,
-            auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
-          });
-
-          const status = process.env.CI_RESULT === 'success' ? '✅' : '❌';
-          const subject = `${status} Pipeline: CI ${process.env.CI_RESULT}`;
-          
-          transporter.sendMail({
-            from: process.env.EMAIL_USER,
-            to: process.env.EMAIL_TO,
-            subject: subject,
-            text: `Workflow Result:\nCI: ${process.env.CI_RESULT}\nDeploy: ${process.env.DEPLOY_RESULT}\n\nView logs: ${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
-          }).then(() => console.log('Email sent')).catch(err => { console.error(err); process.exit(1); });
-          EOF
-          node notify.js
+      - name: Notify Discord - Failure
+        if: failure()
+        uses: Ilshidur/action-discord@master
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        with:
+          args: |
+            ❌ CI FAILED
+            Repo: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
