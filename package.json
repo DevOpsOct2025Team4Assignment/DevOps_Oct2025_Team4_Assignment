@@ -1,19 +1,11 @@
 {
   "name": "devops_oct2025_team4_assignment",
   "version": "1.0.0",
-  "description": "DevOps Oct 2025 Team 4 Assignment",
   "main": "index.js",
   "scripts": {
     "build": "echo 'Building project...'",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/DevOpsOct2025Team4Assignment/DevOps_Oct2025_Team4_Assignment.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "devDependencies": {
     "jest": "^30.2.0"
   }
