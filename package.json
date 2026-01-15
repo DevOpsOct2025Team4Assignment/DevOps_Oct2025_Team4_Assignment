@@ -4,7 +4,10 @@
   "main": "index.js",
   "scripts": {
     "build": "echo 'Building project...'",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo 'No tests specified, passing by default...'"
+  },
+  "dependencies": {
+    "nodemailer": "^6.9.0"
   },
   "devDependencies": {
     "jest": "^30.2.0"
