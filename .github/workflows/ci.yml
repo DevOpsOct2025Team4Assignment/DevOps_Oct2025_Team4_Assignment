@@ -1,4 +1,3 @@
-# .github/workflows/ci.yml
 name: CI Pipeline
 
 on:
@@ -9,61 +8,59 @@ on:
 jobs:
   ci:
     runs-on: ubuntu-latest
+    outputs:
+      status: ${{ job.status }}
     steps:
       - uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build project
-        run: npm run build
+      - name: Install & Build
+        run: |
+          npm ci
+          npm run build
 
   deploy:
     runs-on: ubuntu-latest
-    environment: production
     needs: ci
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
     steps:
       - uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build project
-        run: npm run build
-
+      - name: Install & Build
+        run: |
+          npm ci
+          npm run build
       - name: Run deployment script
         run: |
           if [ -f "./deploy.sh" ]; then
             chmod +x ./deploy.sh
             ./deploy.sh
           else
-            echo "⚠️ No deploy.sh found. Skipping deployment."
+            echo "⚠️ No deploy.sh found. Skipping."
           fi
 
-  # =============== EMAIL NOTIFICATIONS ===============
-  notify-ci-success:
-    if: success() && !cancelled()
-    needs: ci
+  # Combined Notification Job
+  notify:
     runs-on: ubuntu-latest
+    needs: [ci, deploy]
+    # This ensures the job runs even if a previous job failed
+    if: always() 
     steps:
-      - name: Send CI success email
+      - name: Send Email Notification
         env:
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          # Determine status logic
+          CI_STATUS: ${{ needs.ci.result }}
+          DEPLOY_STATUS: ${{ needs.deploy.result }}
         run: |
           mkdir -p /tmp/notify && cd /tmp/notify
           npm init -y >/dev/null
@@ -74,147 +71,25 @@ jobs:
             host: 'smtp.gmail.com',
             port: 587,
             secure: false,
-            auth: {
-              user: process.env.EMAIL_USER,
-              pass: process.env.EMAIL_PASS
-            }
+            auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
           });
-          const branch = process.env.GITHUB_REF_NAME || 'unknown';
-          const subject = `✅ CI Succeeded on ${branch}`;
-          const text = `Build succeeded on branch: ${branch}\nCommit: ${process.env.GITHUB_SHA}\nWorkflow: ${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
-          transporter.sendMail({
-            from: process.env.EMAIL_USER,
-            to: process.env.EMAIL_TO,
-            subject: subject,
-            text: text
-          }).then(() => {
-            console.log('✅ Success email sent');
-          }).catch(err => {
-            console.error('❌ Email failed:', err.message);
-            process.exit(1);
-          });
-          EOF
-          node notify.js
 
-  notify-ci-failure:
-    if: failure()
-    needs: ci
-    runs-on: ubuntu-latest
-    steps:
-      - name: Send CI failure email
-        env:
-          EMAIL_USER: ${{ secrets.EMAIL_USER }}
-          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
-          EMAIL_TO: ${{ secrets.EMAIL_TO }}
-        run: |
-          mkdir -p /tmp/notify && cd /tmp/notify
-          npm init -y >/dev/null
-          npm install nodemailer --silent
-          cat > notify.js << 'EOF'
-          const nodemailer = require('nodemailer');
-          const transporter = nodemailer.createTransport({
-            host: 'smtp.gmail.com',
-            port: 587,
-            secure: false,
-            auth: {
-              user: process.env.EMAIL_USER,
-              pass: process.env.EMAIL_PASS
-            }
-          });
-          const branch = process.env.GITHUB_REF_NAME || 'unknown';
-          const subject = `❌ CI Failed on ${branch}`;
-          const text = `Build failed on branch: ${branch}\nCommit: ${process.env.GITHUB_SHA}\nWorkflow: ${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
-          transporter.sendMail({
-            from: process.env.EMAIL_USER,
-            to: process.env.EMAIL_TO,
-            subject: subject,
-            text: text
-          }).then(() => {
-            console.log('✅ Failure email sent');
-          }).catch(err => {
-            console.error('❌ Email failed:', err.message);
-            process.exit(1);
-          });
-          EOF
-          node notify.js
+          const ciStatus = process.env.CI_STATUS;
+          const deployStatus = process.env.DEPLOY_STATUS;
+          const branch = process.env.GITHUB_REF_NAME;
+          
+          let subject = `Pipeline Status: CI=${ciStatus}`;
+          if (deployStatus !== 'skipped') subject += ` / Deploy=${deployStatus}`;
+          
+          const text = `Workflow: ${process.env.GITHUB_RUN_ID}\nBranch: ${branch}\nCI: ${ciStatus}\nDeploy: ${deployStatus}`;
 
-  notify-deploy-success:
-    if: success() && !cancelled()
-    needs: deploy
-    runs-on: ubuntu-latest
-    steps:
-      - name: Send deploy success email
-        env:
-          EMAIL_USER: ${{ secrets.EMAIL_USER }}
-          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
-          EMAIL_TO: ${{ secrets.EMAIL_TO }}
-        run: |
-          mkdir -p /tmp/notify && cd /tmp/notify
-          npm init -y >/dev/null
-          npm install nodemailer --silent
-          cat > notify.js << 'EOF'
-          const nodemailer = require('nodemailer');
-          const subject = '✅ Production Deploy Succeeded';
-          const text = `Successfully deployed to production.\nCommit: ${process.env.GITHUB_SHA}\nWorkflow: ${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
-          const transporter = nodemailer.createTransport({
-            host: 'smtp.gmail.com',
-            port: 587,
-            secure: false,
-            auth: {
-              user: process.env.EMAIL_USER,
-              pass: process.env.EMAIL_PASS
-            }
-          });
           transporter.sendMail({
             from: process.env.EMAIL_USER,
             to: process.env.EMAIL_TO,
             subject: subject,
             text: text
-          }).then(() => {
-            console.log('✅ Deploy success email sent');
-          }).catch(err => {
-            console.error('❌ Email failed:', err.message);
-            process.exit(1);
-          });
-          EOF
-          node notify.js
-
-  notify-deploy-failure:
-    if: failure()
-    needs: deploy
-    runs-on: ubuntu-latest
-    steps:
-      - name: Send deploy failure email
-        env:
-          EMAIL_USER: ${{ secrets.EMAIL_USER }}
-          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
-          EMAIL_TO: ${{ secrets.EMAIL_TO }}
-        run: |
-          mkdir -p /tmp/notify && cd /tmp/notify
-          npm init -y >/dev/null
-          npm install nodemailer --silent
-          cat > notify.js << 'EOF'
-          const nodemailer = require('nodemailer');
-          const subject = '❌ Production Deploy Failed';
-          const text = `Deployment to production failed.\nCommit: ${process.env.GITHUB_SHA}\nWorkflow: ${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
-          const transporter = nodemailer.createTransport({
-            host: 'smtp.gmail.com',
-            port: 587,
-            secure: false,
-            auth: {
-              user: process.env.EMAIL_USER,
-              pass: process.env.EMAIL_PASS
-            }
-          });
-          transporter.sendMail({
-            from: process.env.EMAIL_USER,
-            to: process.env.EMAIL_TO,
-            subject: subject,
-            text: text
-          }).then(() => {
-            console.log('✅ Deploy failure email sent');
-          }).catch(err => {
-            console.error('❌ Email failed:', err.message);
+          }).then(() => console.log('Email sent')).catch(err => {
+            console.error(err);
             process.exit(1);
           });
           EOF
