@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [ci, deploy]
     if: always() 
-    environment: production
+    # Removed environment: production to ensure Repository Secrets are accessible
     steps:
       - name: Send Email Notification
         env:
@@ -60,9 +60,8 @@ jobs:
           CI_RESULT: ${{ needs.ci.result }}
           DEPLOY_RESULT: ${{ needs.deploy.result }}
         run: |
-          # Validation check to prevent silent failures
           if [ -z "$EMAIL_USER" ] || [ -z "$EMAIL_PASS" ]; then
-            echo "❌ Error: Secrets not found in Repository Settings."
+            echo "❌ Error: EMAIL_USER or EMAIL_PASS secrets are missing in GitHub."
             exit 1
           fi
 
@@ -76,24 +75,16 @@ jobs:
             host: 'smtp.gmail.com',
             port: 587,
             secure: false,
-            auth: { 
-              user: process.env.EMAIL_USER, 
-              pass: process.env.EMAIL_PASS 
-            }
+            auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
           });
 
           const status = process.env.CI_RESULT === 'success' ? '✅' : '❌';
-          const deployStatus = process.env.DEPLOY_RESULT || 'skipped';
           
-          const mailOptions = {
+          transporter.sendMail({
             from: process.env.EMAIL_USER,
             to: process.env.EMAIL_TO,
             subject: `${status} Pipeline Result: CI ${process.env.CI_RESULT}`,
-            text: `Workflow: ${process.env.GITHUB_RUN_ID}\nCI Status: ${process.env.CI_RESULT}\nDeploy Status: ${deployStatus}\nURL: ${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
-          };
-
-          transporter.sendMail(mailOptions)
-            .then(() => console.log('✅ Email sent'))
-            .catch(err => { console.error('❌ SMTP Error:', err); process.exit(1); });
+            text: `Workflow: ${process.env.GITHUB_RUN_ID}\nCI: ${process.env.CI_RESULT}\nDeploy: ${process.env.DEPLOY_RESULT || 'Skipped'}`
+          }).then(() => console.log('✅ Email sent')).catch(err => { console.error(err); process.exit(1); });
           EOF
           node notify.js
