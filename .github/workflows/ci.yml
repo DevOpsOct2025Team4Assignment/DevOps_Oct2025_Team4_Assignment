@@ -16,7 +16,6 @@ jobs:
           node-version: '18'
           cache: 'npm'
       - name: Install & Build
-        # Changed 'npm ci' to 'npm install' to handle lockfile sync issues
         run: |
           npm install
           npm run build
@@ -30,10 +29,6 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
       - name: Install & Build
         run: |
           npm install
@@ -49,9 +44,8 @@ jobs:
 
   notify:
     runs-on: ubuntu-latest
-    needs: [ci, deploy]
+    needs: [ci] # Only depend on CI to ensure it triggers on every branch
     if: always()
-    # Note: Environment tag removed to ensure it pulls from Repository Secrets
     steps:
       - name: Send Email Notification
         env:
@@ -59,10 +53,9 @@ jobs:
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
           CI_RESULT: ${{ needs.ci.result }}
-          DEPLOY_RESULT: ${{ needs.deploy.result }}
         run: |
           if [ -z "$EMAIL_USER" ] || [ -z "$EMAIL_PASS" ]; then
-            echo "❌ Error: EMAIL_USER or EMAIL_PASS secrets are missing in GitHub Repository Secrets."
+            echo "❌ Error: Secrets missing. Ensure they are in Repository Secrets."
             exit 1
           fi
 
@@ -85,7 +78,7 @@ jobs:
             from: process.env.EMAIL_USER,
             to: process.env.EMAIL_TO,
             subject: `${status} Pipeline Result: CI ${process.env.CI_RESULT}`,
-            text: `Workflow: ${process.env.GITHUB_RUN_ID}\nCI: ${process.env.CI_RESULT}\nDeploy: ${process.env.DEPLOY_RESULT || 'Skipped'}`
+            text: `Workflow: ${process.env.GITHUB_RUN_ID}\nStatus: ${process.env.CI_RESULT}`
           }).then(() => console.log('✅ Email sent')).catch(err => { console.error(err); process.exit(1); });
           EOF
           node notify.js
