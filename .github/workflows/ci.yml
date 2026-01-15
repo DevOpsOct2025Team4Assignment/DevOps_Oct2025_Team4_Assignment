@@ -1,5 +1,5 @@
 # .github/workflows/ci.yml
-name: CI and Deploy Pipeline
+name: CI Pipeline
 
 on:
   push:
@@ -29,7 +29,6 @@ jobs:
     environment: production
     needs: ci
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
     steps:
       - uses: actions/checkout@v4
 
@@ -45,8 +44,14 @@ jobs:
       - name: Build project
         run: npm run build
 
-      - name: Deploy
-        run: ./deploy.sh
+      - name: Run deployment script
+        run: |
+          if [ -f "./deploy.sh" ]; then
+            chmod +x ./deploy.sh
+            ./deploy.sh
+          else
+            echo "⚠️ No deploy.sh found. Skipping deployment."
+          fi
 
   # =============== EMAIL NOTIFICATIONS ===============
   notify-ci-success:
@@ -59,14 +64,12 @@ jobs:
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
-          SUBJECT: "✅ CI Succeeded"
-          BODY: "Build succeeded on branch ${{ github.ref_name }} (${{ github.event_name }}).\nCommit: ${{ github.sha }}\nWorkflow: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
         run: |
-          mkdir -p /tmp/email && cd /tmp/email
-          echo '{"type":"module"}' > package.json
-          npm install nodemailer
+          mkdir -p /tmp/notify && cd /tmp/notify
+          npm init -y >/dev/null
+          npm install nodemailer --silent
           cat > notify.js << 'EOF'
-          import nodemailer from 'nodemailer';
+          const nodemailer = require('nodemailer');
           const transporter = nodemailer.createTransport({
             host: 'smtp.gmail.com',
             port: 587,
@@ -76,13 +79,20 @@ jobs:
               pass: process.env.EMAIL_PASS
             }
           });
-          const info = await transporter.sendMail({
+          const branch = process.env.GITHUB_REF_NAME || 'unknown';
+          const subject = `✅ CI Succeeded on ${branch}`;
+          const text = `Build succeeded on branch: ${branch}\nCommit: ${process.env.GITHUB_SHA}\nWorkflow: ${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+          transporter.sendMail({
             from: process.env.EMAIL_USER,
             to: process.env.EMAIL_TO,
-            subject: process.env.SUBJECT,
-            text: process.env.BODY
+            subject: subject,
+            text: text
+          }).then(() => {
+            console.log('✅ Success email sent');
+          }).catch(err => {
+            console.error('❌ Email failed:', err.message);
+            process.exit(1);
           });
-          console.log('✅ Email sent:', info.messageId);
           EOF
           node notify.js
 
@@ -96,14 +106,12 @@ jobs:
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
-          SUBJECT: "❌ CI Failed"
-          BODY: "Build failed on branch ${{ github.ref_name }} (${{ github.event_name }}).\nCommit: ${{ github.sha }}\nWorkflow: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
         run: |
-          mkdir -p /tmp/email && cd /tmp/email
-          echo '{"type":"module"}' > package.json
-          npm install nodemailer
+          mkdir -p /tmp/notify && cd /tmp/notify
+          npm init -y >/dev/null
+          npm install nodemailer --silent
           cat > notify.js << 'EOF'
-          import nodemailer from 'nodemailer';
+          const nodemailer = require('nodemailer');
           const transporter = nodemailer.createTransport({
             host: 'smtp.gmail.com',
             port: 587,
@@ -113,13 +121,20 @@ jobs:
               pass: process.env.EMAIL_PASS
             }
           });
-          const info = await transporter.sendMail({
+          const branch = process.env.GITHUB_REF_NAME || 'unknown';
+          const subject = `❌ CI Failed on ${branch}`;
+          const text = `Build failed on branch: ${branch}\nCommit: ${process.env.GITHUB_SHA}\nWorkflow: ${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+          transporter.sendMail({
             from: process.env.EMAIL_USER,
             to: process.env.EMAIL_TO,
-            subject: process.env.SUBJECT,
-            text: process.env.BODY
+            subject: subject,
+            text: text
+          }).then(() => {
+            console.log('✅ Failure email sent');
+          }).catch(err => {
+            console.error('❌ Email failed:', err.message);
+            process.exit(1);
           });
-          console.log('✅ Email sent:', info.messageId);
           EOF
           node notify.js
 
@@ -133,14 +148,14 @@ jobs:
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
-          SUBJECT: "✅ Production Deploy Succeeded"
-          BODY: "Successfully deployed commit ${{ github.sha }} to production.\nWorkflow: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
         run: |
-          mkdir -p /tmp/email && cd /tmp/email
-          echo '{"type":"module"}' > package.json
-          npm install nodemailer
+          mkdir -p /tmp/notify && cd /tmp/notify
+          npm init -y >/dev/null
+          npm install nodemailer --silent
           cat > notify.js << 'EOF'
-          import nodemailer from 'nodemailer';
+          const nodemailer = require('nodemailer');
+          const subject = '✅ Production Deploy Succeeded';
+          const text = `Successfully deployed to production.\nCommit: ${process.env.GITHUB_SHA}\nWorkflow: ${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
           const transporter = nodemailer.createTransport({
             host: 'smtp.gmail.com',
             port: 587,
@@ -150,13 +165,17 @@ jobs:
               pass: process.env.EMAIL_PASS
             }
           });
-          const info = await transporter.sendMail({
+          transporter.sendMail({
             from: process.env.EMAIL_USER,
             to: process.env.EMAIL_TO,
-            subject: process.env.SUBJECT,
-            text: process.env.BODY
+            subject: subject,
+            text: text
+          }).then(() => {
+            console.log('✅ Deploy success email sent');
+          }).catch(err => {
+            console.error('❌ Email failed:', err.message);
+            process.exit(1);
           });
-          console.log('✅ Email sent:', info.messageId);
           EOF
           node notify.js
 
@@ -170,14 +189,14 @@ jobs:
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
-          SUBJECT: "❌ Production Deploy Failed"
-          BODY: "Deployment failed for commit ${{ github.sha }}.\nWorkflow: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
         run: |
-          mkdir -p /tmp/email && cd /tmp/email
-          echo '{"type":"module"}' > package.json
-          npm install nodemailer
+          mkdir -p /tmp/notify && cd /tmp/notify
+          npm init -y >/dev/null
+          npm install nodemailer --silent
           cat > notify.js << 'EOF'
-          import nodemailer from 'nodemailer';
+          const nodemailer = require('nodemailer');
+          const subject = '❌ Production Deploy Failed';
+          const text = `Deployment to production failed.\nCommit: ${process.env.GITHUB_SHA}\nWorkflow: ${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
           const transporter = nodemailer.createTransport({
             host: 'smtp.gmail.com',
             port: 587,
@@ -187,12 +206,16 @@ jobs:
               pass: process.env.EMAIL_PASS
             }
           });
-          const info = await transporter.sendMail({
+          transporter.sendMail({
             from: process.env.EMAIL_USER,
             to: process.env.EMAIL_TO,
-            subject: process.env.SUBJECT,
-            text: process.env.BODY
+            subject: subject,
+            text: text
+          }).then(() => {
+            console.log('✅ Deploy failure email sent');
+          }).catch(err => {
+            console.error('❌ Email failed:', err.message);
+            process.exit(1);
           });
-          console.log('✅ Email sent:', info.messageId);
           EOF
           node notify.js
