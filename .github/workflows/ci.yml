@@ -7,43 +7,45 @@ on:
     branches: [ "**" ]
 
 jobs:
-  # Job 1: Build and Test
+  # Job 1: Build and Test (Pure Python)
   ci:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       
-      - name: Setup Node.js (For App Only)
-        uses: actions/setup-node@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          node-version: '18'
-          cache: 'npm'
+          python-version: '3.10'
 
-      - name: Install and Test
+      - name: Install Dependencies
         run: |
-          npm install
-          npm test
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-  # Job 2: Deployment (Commands logic inside YAML)
+      - name: Run Tests
+        run: |
+          # Replace 'python -m unittest' with 'pytest' if you use pytest
+          python -m unittest discover tests/
+
+  # Job 2: Deployment
   deploy:
     runs-on: ubuntu-latest
     needs: ci
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - uses: actions/checkout@v4
-      
       - name: Execute Deployment
         run: |
-          echo "🚀 Starting Deployment Logic..."
-          # Put your deployment commands here
-          # Example: rsync -avz ./dist user@host:/var/www/
-          echo "✅ Deployment completed directly from YAML."
+          echo "🚀 Deploying Python Application..."
+          # Example: python setup.py sdist bdist_wheel
+          echo "✅ Deployment logic completed."
 
   # Job 3: Notification (Pure Python Standard Library)
   notify:
     runs-on: ubuntu-latest
     needs: [ci]
-    if: always() # Run even if CI fails
+    if: always() 
     steps:
       - name: Python Email Dispatcher
         env:
@@ -57,37 +59,39 @@ jobs:
           import os
           from email.message import EmailMessage
 
-          # Fetching environment variables set in YAML
-          user = os.getenv('EMAIL_USER')
-          password = os.getenv('EMAIL_PASS')
-          recipient = os.getenv('EMAIL_TO')
-          status = os.getenv('CI_RESULT')
-          repo = os.getenv('GITHUB_REPOSITORY')
-          run_id = os.getenv('GITHUB_RUN_ID')
+          def send_notification():
+              user = os.getenv('EMAIL_USER')
+              password = os.getenv('EMAIL_PASS')
+              recipient = os.getenv('EMAIL_TO')
+              status = os.getenv('CI_RESULT')
+              repo = os.getenv('GITHUB_REPOSITORY')
+              run_id = os.getenv('GITHUB_RUN_ID')
 
-          # Logic for the email content
-          icon = "✅" if status == "success" else "❌"
-          
-          msg = EmailMessage()
-          msg['Subject'] = f"{icon} CI Notification: {repo}"
-          msg['From'] = user
-          msg['To'] = recipient
-          
-          content = (
-              f"The CI Pipeline for {repo} has finished.\n\n"
-              f"Result: {status.upper()}\n"
-              f"Logs: https://github.com/{repo}/actions/runs/{run_id}\n"
-          )
-          msg.set_content(content)
+              if not all([user, password, recipient]):
+                  print("❌ Error: Missing secrets.")
+                  return
 
-          # Sending via Python's built-in smtplib (No external installs)
-          try:
-              with smtplib.SMTP('smtp.gmail.com', 587) as server:
-                  server.starttls()
-                  server.login(user, password)
-                  server.send_message(msg)
-              print("Email sent successfully.")
-          except Exception as e:
-              print(f"Error sending email: {e}")
-              exit(1)
+              icon = "✅" if status == "success" else "❌"
+              msg = EmailMessage()
+              msg['Subject'] = f"{icon} Python CI Alert: {repo}"
+              msg['From'] = user
+              msg['To'] = recipient
+              
+              msg.set_content(
+                  f"Repository: {repo}\n"
+                  f"Result: {status.upper()}\n"
+                  f"Logs: https://github.com/{repo}/actions/runs/{run_id}"
+              )
+
+              try:
+                  with smtplib.SMTP('smtp.gmail.com', 587) as server:
+                      server.starttls()
+                      server.login(user, password)
+                      server.send_message(msg)
+                  print("✅ Email sent.")
+              except Exception as e:
+                  print(f"❌ Error: {e}")
+
+          if __name__ == "__main__":
+              send_notification()
           EOF
