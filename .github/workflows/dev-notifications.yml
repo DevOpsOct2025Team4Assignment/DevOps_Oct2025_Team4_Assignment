@@ -9,9 +9,6 @@ on:
 jobs:
   ci:
     runs-on: ubuntu-latest
-    # We create an output so the next job knows for sure if tests passed or failed
-    outputs:
-      test_result: ${{ steps.run_tests.outcome }}
     steps:
       - uses: actions/checkout@v4
       
@@ -20,15 +17,11 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Create Unsuccessful Unit Test
-        run: |
-          echo "def test_fail(): assert 1 == 2" > test_mock.py
-
       - name: Run Unit Tests
-        id: run_tests
-        continue-on-error: true  # This is the key fix
+        id: tests
+        # This will fail because 1 != 2, triggering the failure logic
         run: |
-          python3 -m pytest test_mock.py
+          python3 -c "assert 1 == 2" 
 
   notify-devs:
     runs-on: ubuntu-latest
@@ -38,14 +31,14 @@ jobs:
       - name: Send Discord Notification
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_DEV_WEBHOOK_URL }}
-          # We check the specific outcome of the test step
-          CI_RESULT: ${{ needs.ci.outputs.test_result }}
+          CI_RESULT: ${{ needs.ci.result }}
           DEV_ROLE_ID: "1461638107211235401"
+          # Explicitly passing these so Python can see them
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
           COMMIT_SHA: ${{ github.sha }}
           COMMIT_MSG: ${{ github.event.head_commit.message || github.event.pull_request.title }}
-          REPO: ${{ github.repository }}
-          RUN_ID: ${{ github.run_id }}
-          BRANCH: ${{ github.ref_name }}
         run: |
           python3 - << 'EOF'
           import urllib.request
@@ -54,40 +47,49 @@ jobs:
 
           def send_discord():
               webhook_url = os.getenv('DISCORD_WEBHOOK')
-              # outcome will be 'failure' or 'success'
               status = os.getenv('CI_RESULT')
               role_id = os.getenv('DEV_ROLE_ID')
-              branch = os.getenv('BRANCH')
-              repo = os.getenv('REPO')
-              run_id = os.getenv('RUN_ID')
-              
-              short_sha = os.getenv('COMMIT_SHA', '0000000')[:7]
-              commit_msg = os.getenv('COMMIT_MSG', 'Manual Update').split('\n')[0]
-              log_url = f"https://github.com/{repo}/actions/runs/{run_id}"
+              repo = os.getenv('GITHUB_REPOSITORY')
+              branch = os.getenv('GITHUB_REF_NAME')
+              run_id = os.getenv('GITHUB_RUN_ID')
+              sha = os.getenv('COMMIT_SHA', '0000000')[:7]
+              msg = os.getenv('COMMIT_MSG', 'CI Update').split('\n')[0]
 
+              if not webhook_url:
+                  print("❌ Error: DISCORD_DEV_WEBHOOK_URL secret is missing.")
+                  return
+
+              # Exact Format Requested
               if status == 'failure':
                   header = f"🚨 *Tests failed in* `{branch}`"
-                  footer = f"View logs <@&{role_id}>"
-                  color = 15158332 
+                  mention = f"\n\nView logs <@&{role_id}>"
+                  color = 15158332 # Red
               else:
                   header = f"✅ *Tests passed in* `{branch}`"
-                  footer = f"View logs"
-                  color = 3066993 
+                  mention = f"\n\nView logs"
+                  color = 3066993 # Green
 
-              content = f"{header}\n\n`{short_sha}` {commit_msg}\n\n{footer}"
+              content = f"{header}\n\n`{sha}` {msg}{mention}"
 
               payload = {
                   "content": content,
-                  "embeds": [{"url": log_url, "color": color}]
+                  "embeds": [{
+                      "description": f"[View full logs and details](https://github.com/{repo}/actions/runs/{run_id})",
+                      "color": color
+                  }]
               }
 
-              req = urllib.request.Request(webhook_url, data=json.dumps(payload).encode('utf-8'), 
-                                           headers={'Content-Type': 'application/json'})
+              req = urllib.request.Request(
+                  webhook_url, 
+                  data=json.dumps(payload).encode('utf-8'), 
+                  headers={'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}
+              )
+              
               try:
                   with urllib.request.urlopen(req) as response:
-                      print(f"Sent: {response.status}")
+                      print(f"Status: {response.status}")
               except Exception as e:
-                  print(f"Error: {e}")
+                  print(f"❌ Failed: {e}")
 
           if __name__ == "__main__":
               send_discord()
