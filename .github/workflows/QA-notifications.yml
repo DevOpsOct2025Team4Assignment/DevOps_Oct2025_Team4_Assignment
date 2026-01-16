@@ -1,0 +1,50 @@
+name: CI Pipeline - QA Alerts
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+
+jobs:
+  qa-validation:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run QA Test Script
+        id: run_tests
+        run: |
+          # Grant permission to run the script
+          chmod +x ./qa-test.sh
+          # Execute the script
+          ./qa-test.sh
+
+      # --- QA NOTIFICATION ON FAILURE ---
+      - name: Notify QA - Code Break
+        if: failure()
+        uses: Ilshidur/action-discord@master
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_QA_WEBHOOK_URL }}
+        with:
+          args: |
+            🚨 **QA ALERT: CODE BREAK** 🚨
+            
+            Attention <@&1461638033068785798>: The automated QA script reported an error.
+            
+            **Details:**
+            - **Repository:** ${{ github.repository }}
+            - **Branch:** `${{ github.ref_name }}`
+            - **Run ID:** ${{ github.run_id }}
+            
+            🔗 **Investigate Here:** https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      # --- QA NOTIFICATION ON SUCCESS ---
+      - name: Notify QA - Success
+        if: success()
+        uses: Ilshidur/action-discord@master
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_QA_WEBHOOK_URL }}
+        with:
+          args: "✅ **QA Check Passed:** The test script completed successfully."
