@@ -19,9 +19,11 @@ jobs:
 
       - name: Run Unit Tests
         id: tests
-        # This will fail because 1 != 2, triggering the failure logic
+        # This now passes because 1 equals 1
         run: |
-          python3 -c "assert 1 == 2" 
+          echo "Running mock unit tests..."
+          python3 -c "assert 1 == 1" 
+          echo "✅ All tests passed!"
 
   notify-devs:
     runs-on: ubuntu-latest
@@ -33,11 +35,11 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_DEV_WEBHOOK_URL }}
           CI_RESULT: ${{ needs.ci.result }}
           DEV_ROLE_ID: "1461638107211235401"
-          # Explicitly passing these so Python can see them
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_REF_NAME: ${{ github.ref_name }}
           GITHUB_RUN_ID: ${{ github.run_id }}
           COMMIT_SHA: ${{ github.sha }}
+          # Captures the commit message or PR title
           COMMIT_MSG: ${{ github.event.head_commit.message || github.event.pull_request.title }}
         run: |
           python3 - << 'EOF'
@@ -53,28 +55,29 @@ jobs:
               branch = os.getenv('GITHUB_REF_NAME')
               run_id = os.getenv('GITHUB_RUN_ID')
               sha = os.getenv('COMMIT_SHA', '0000000')[:7]
-              msg = os.getenv('COMMIT_MSG', 'CI Update').split('\n')[0]
+              msg = os.getenv('COMMIT_MSG', 'Manual Update').split('\n')[0]
 
               if not webhook_url:
-                  print("❌ Error: DISCORD_DEV_WEBHOOK_URL secret is missing.")
+                  print("❌ Error: Webhook secret is missing.")
                   return
 
-              # Exact Format Requested
-              if status == 'failure':
-                  header = f"🚨 *Tests failed in* `{branch}`"
-                  mention = f"\n\nView logs <@&{role_id}>"
-                  color = 15158332 # Red
-              else:
+              # Logic for the specific format you requested
+              if status == 'success':
                   header = f"✅ *Tests passed in* `{branch}`"
-                  mention = f"\n\nView logs"
+                  footer = "View logs"
                   color = 3066993 # Green
+              else:
+                  header = f"🚨 *Tests failed in* `{branch}`"
+                  footer = f"View logs <@&{role_id}>"
+                  color = 15158332 # Red
 
-              content = f"{header}\n\n`{sha}` {msg}{mention}"
+              # Formatting the message body
+              content = f"{header}\n\n`{sha}` {msg}\n\n{footer}"
 
               payload = {
                   "content": content,
                   "embeds": [{
-                      "description": f"[View full logs and details](https://github.com/{repo}/actions/runs/{run_id})",
+                      "description": f"[View Details on GitHub](https://github.com/{repo}/actions/runs/{run_id})",
                       "color": color
                   }]
               }
@@ -87,9 +90,9 @@ jobs:
               
               try:
                   with urllib.request.urlopen(req) as response:
-                      print(f"Status: {response.status}")
+                      print(f"Notification Sent! Status: {response.status}")
               except Exception as e:
-                  print(f"❌ Failed: {e}")
+                  print(f"❌ Failed to send: {e}")
 
           if __name__ == "__main__":
               send_discord()
