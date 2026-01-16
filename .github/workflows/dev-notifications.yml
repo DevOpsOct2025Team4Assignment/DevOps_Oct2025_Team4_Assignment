@@ -17,18 +17,14 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
+      - name: Create Unsuccessful Unit Test
         run: |
-          pip install pytest
-
-      - name: Create Mock Unit Test
-        run: |
-          echo "def test_logic(): assert True" > test_mock.py
+          # This test is designed to fail
+          echo "def test_logic(): assert 1 == 2, 'Math error: 1 does not equal 2'" > test_mock.py
 
       - name: Run Unit Tests
-        id: run_tests
         run: |
-          pytest test_mock.py
+          python3 -m pytest test_mock.py
 
   notify-devs:
     runs-on: ubuntu-latest
@@ -40,9 +36,9 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_DEV_WEBHOOK_URL }}
           CI_RESULT: ${{ needs.ci.result }}
           DEV_ROLE_ID: "1461638107211235401"
-          # Context variables for the message
-          COMMIT_MSG: ${{ github.event.head_commit.message }}
           COMMIT_SHA: ${{ github.sha }}
+          # Fallback for commit message if head_commit is null
+          COMMIT_MSG: ${{ github.event.head_commit.message || github.event.pull_request.title }}
           REPO: ${{ github.repository }}
           RUN_ID: ${{ github.run_id }}
           BRANCH: ${{ github.ref_name }}
@@ -60,14 +56,12 @@ jobs:
               repo = os.getenv('REPO')
               run_id = os.getenv('RUN_ID')
               
-              # Formatting Commit Info
-              full_sha = os.getenv('COMMIT_SHA', '0000000')
-              short_sha = full_sha[:7]
-              commit_msg = os.getenv('COMMIT_MSG', 'No commit message available').split('\n')[0]
+              short_sha = os.getenv('COMMIT_SHA', '0000000')[:7]
+              commit_msg = os.getenv('COMMIT_MSG', 'Manual or Automated Trigger').split('\n')[0]
               log_url = f"https://github.com/{repo}/actions/runs/{run_id}"
 
               if not webhook_url:
-                  print("❌ Secret missing.")
+                  print("❌ Error: Webhook URL missing.")
                   return
 
               if status == 'failure':
@@ -79,13 +73,14 @@ jobs:
                   footer = f"View logs"
                   color = 3066993 # Green
 
-              # Combine components into your requested format
-              formatted_content = f"{header}\n\n`{short_sha}` {commit_msg}\n\n{footer}"
+              # Constructing the exact format requested
+              content = f"{header}\n\n`{short_sha}` {commit_msg}\n\n{footer}"
 
               payload = {
-                  "content": formatted_content,
+                  "content": content,
                   "embeds": [{
-                      "description": f"[Click here to see details]({log_url})",
+                      "title": "Build Details",
+                      "url": log_url,
                       "color": color
                   }]
               }
@@ -93,12 +88,12 @@ jobs:
               req = urllib.request.Request(
                   webhook_url, 
                   data=json.dumps(payload).encode('utf-8'), 
-                  headers={'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}
+                  headers={'Content-Type': 'application/json'}
               )
               
               try:
                   with urllib.request.urlopen(req) as response:
-                      print(f"Notification Sent: {response.status}")
+                      print(f"Notification status: {response.status}")
               except Exception as e:
                   print(f"❌ Failed: {e}")
 
