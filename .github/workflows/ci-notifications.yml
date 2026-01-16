@@ -11,31 +11,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Setup
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. Run your actual Build/Test logic here
       - name: Run basic check
-        run: |
-          echo "CI is running..."
-          # Add your npm test, go test, etc. here
+        run: echo "CI is running..."
 
-      # 3. Enhanced Discord Notification
-      # This runs regardless of success or failure due to if: always()
-      - name: Update Discord Status
-        if: always()
-        uses: sarisia/actions-status-discord@v1
+      - name: Notify Discord - Success
+        if: success()
+        uses: Ilshidur/action-discord@master
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
         with:
-          webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          status: ${{ job.status }}
-          title: "Build Results: ${{ github.repository }}"
-          description: |
-            **Workflow**: `${{ github.workflow }}`
-            **Event**: `${{ github.event_name }}`
-            **Branch**: `${{ github.ref_name }}`
-            **Commit**: [`${{ github.sha }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})
-          # Optional: Link directly to the logs for one-click debugging
-          url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          color: ${{ job.status == 'success' && '0x28a745' || '0xd73a49' }}
-          username: "GitHub Actions"
+          args: |
+            ✅ CI SUCCESS
+            Repo: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+
+      - name: Notify Discord - Failure
+        if: failure()
+        uses: Ilshidur/action-discord@master
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        with:
+          args: |
+            ❌ CI FAILED
+            Repo: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}

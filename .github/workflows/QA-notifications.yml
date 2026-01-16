@@ -17,40 +17,35 @@ jobs:
       - name: Run QA Test Script
         id: run_tests
         run: |
+          # Grant permission to run the script
           chmod +x ./qa-test.sh
+          # Execute the script
           ./qa-test.sh
 
-      # 🚨 QA FAILURE EMBED
+      # --- QA NOTIFICATION ON FAILURE ---
       - name: Notify QA - Code Break
         if: failure()
-        uses: tsickert/discord-webhook@v5
+        uses: Ilshidur/action-discord@master
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_QA_WEBHOOK_URL }}
         with:
-          webhook-url: ${{ secrets.DISCORD_QA_WEBHOOK_URL }}
-          content: "<@&1461638033068785798>"
-          embed-title: "🚨 QA ALERT: Code Break"
-          embed-description: |
-            The automated QA script **reported an error**.
-          embed-color: 15158332
-          embed-url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          embed-footer-text: "GitHub Actions"
-          embed-fields: |
-            Repository,${{ github.repository }},true
-            Branch,${{ github.ref_name }},true
-            Run ID,${{ github.run_id }},true
+          args: |
+            🚨 **QA ALERT: CODE BREAK** 🚨
+            
+            Attention <@&1461638033068785798>: The automated QA script reported an error.
+            
+            **Details:**
+            - **Repository:** ${{ github.repository }}
+            - **Branch:** `${{ github.ref_name }}`
+            - **Run ID:** ${{ github.run_id }}
+            
+            🔗 **Investigate Here:** https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-      # ✅ QA SUCCESS EMBED
+      # --- QA NOTIFICATION ON SUCCESS ---
       - name: Notify QA - Success
         if: success()
-        uses: tsickert/discord-webhook@v5
+        uses: Ilshidur/action-discord@master
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_QA_WEBHOOK_URL }}
         with:
-          webhook-url: ${{ secrets.DISCORD_QA_WEBHOOK_URL }}
-          embed-title: "✅ QA Check Passed"
-          embed-description: |
-            The QA test script completed **successfully**.
-          embed-color: 3066993
-          embed-url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          embed-footer-text: "GitHub Actions"
-          embed-fields: |
-            Repository,${{ github.repository }},true
-            Branch,${{ github.ref_name }},true
-            Run ID,${{ github.run_id }},true
+          args: "✅ **QA Check Passed:** The test script completed successfully."
