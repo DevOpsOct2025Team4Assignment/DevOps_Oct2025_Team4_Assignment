@@ -22,7 +22,7 @@ jobs:
         run: |
           echo "Simulating build and environment setup..."
           # To test a FAILURE: uncomment the line below
-          # exit 1 
+           exit 1 
           echo "✅ Build simulation successful."
 
   # Job 2: Discord Notification (Pure Python - No dependencies)
