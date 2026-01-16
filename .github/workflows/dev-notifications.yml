@@ -2,7 +2,7 @@ name: Developer CI Pipeline
 
 on:
   push:
-    branches: [ "**" ]  # Triggers on every branch
+    branches: [ "main" ]  # Triggers on every branch
   pull_request:
     branches: [ "**" ]
 
