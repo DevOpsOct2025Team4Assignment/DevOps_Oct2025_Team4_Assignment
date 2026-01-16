@@ -32,7 +32,7 @@ jobs:
           args: |
             🚨 **QA ALERT: CODE BREAK** 🚨
             
-            Attention <@&1461638033068785798>: The automated QA script reported an error.
+            <@&1461638033068785798>: The automated QA script reported an error.
             
             **Details:**
             - **Repository:** ${{ github.repository }}

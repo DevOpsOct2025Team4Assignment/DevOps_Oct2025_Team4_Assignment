@@ -2,29 +2,34 @@ name: Developer CI Pipeline
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main" ]  # Triggers on every branch
   pull_request:
     branches: [ "**" ]
 
 jobs:
+  # Job 1: Build/Test Simulation
   ci:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
+
       - name: Run Build Logic
         run: |
-          echo "Simulating build..."
-          # exit 1 
+          echo "Simulating build and environment setup..."
+          # To test a FAILURE: uncomment the line below
+           # exit 1 
           echo "✅ Build simulation successful."
 
+  # Job 2: Discord Notification (Pure Python - No dependencies)
   notify-devs:
     runs-on: ubuntu-latest
     needs: [ci]
-    if: always()
+    if: always() # Ensures it runs on both Success and Failure
     steps:
       - name: Send Discord Notification
         env:
@@ -44,45 +49,36 @@ jobs:
               repo = os.getenv('GITHUB_REPOSITORY')
               branch = os.getenv('GITHUB_REF_NAME')
               run_id = os.getenv('GITHUB_RUN_ID')
-              actor = os.getenv('GITHUB_ACTOR')
-              sha = os.getenv('GITHUB_SHA')[:7] # Short commit hash
 
               if not webhook_url:
+                  print("❌ Error: DISCORD_DEV_WEBHOOK_URL secret is missing.")
                   return
 
-              # Style settings
-              is_fail = status == 'failure'
-              color = 15158332 if is_fail else 3066993 # Red vs Green
-              status_text = "Failed" if is_fail else "Successful"
-              
-              # Build the Embed
+              # Logic for Failure vs Success
+              if status == 'failure':
+                  content = f"🚨 **BUILD FAILED** 🚨\n <@&{role_id}>: A break occurred on branch `{branch}`."
+                  color = 15158332 # Red
+              else:
+                  content = f"✅ **BUILD PASSED**\nBranch `{branch}` is stable."
+                  color = 3066993 # Green
+
               payload = {
-                  "content": f"🚨 <@&{role_id}> Build Failed!" if is_fail else None,
+                  "content": content if status == 'failure' else None,
                   "embeds": [{
-                      "title": f"[{repo}] Workflow {status_text}: CI Pipeline",
-                      "url": f"https://github.com/{repo}/actions/runs/{run_id}",
-                      "color": color,
-                      "fields": [
-                          {"name": "Actor", "value": actor, "inline": True},
-                          {"name": "Workflow Run", "value": f"#{run_id}", "inline": True},
-                          {"name": "Commit", "value": f"[`{sha}`](https://github.com/{repo}/commit/{sha})", "inline": True},
-                          {"name": "Branch", "value": f"`{branch}`", "inline": True}
-                      ],
-                      "footer": {"text": "GitHub Actions"}
+                      "title": f"CI Pipeline Result: {status.upper()}",
+                      "description": f"**Repo:** {repo}\n**Branch:** {branch}\n[View Logs](https://github.com/{repo}/actions/runs/{run_id})",
+                      "color": color
                   }]
               }
 
-              req = urllib.request.Request(
-                  webhook_url, 
-                  data=json.dumps(payload).encode('utf-8'), 
-                  headers={'Content-Type': 'application/json'}
-              )
+              req = urllib.request.Request(webhook_url, data=json.dumps(payload).encode('utf-8'), 
+                                           headers={'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'})
               
               try:
                   with urllib.request.urlopen(req) as response:
-                      pass
+                      print(f"Status: {response.status}")
               except Exception as e:
-                  print(f"Error: {e}")
+                  print(f"❌ Failed to send Discord alert: {e}")
 
           if __name__ == "__main__":
               send_discord()
