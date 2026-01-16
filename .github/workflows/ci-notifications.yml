@@ -9,87 +9,33 @@ on:
 jobs:
   ci:
     runs-on: ubuntu-latest
+
     steps:
+      # 1. Setup
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 2. Run your actual Build/Test logic here
       - name: Run basic check
-        run: echo "CI is running..."
-
-  notify:
-    runs-on: ubuntu-latest
-    needs: [ci]
-    if: always()
-    steps:
-      - name: Notify Discord
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          CI_RESULT: ${{ needs.ci.result }}
-          DEV_ROLE_ID: "1461638107211235401"
-          # Optional: Add these to your GitHub Secrets for the full look
-          AVATAR_URL: ${{ secrets.AVATAR_URL }} 
-          EMBED_IMAGE: ${{ secrets.EMBED_IMAGE }}
         run: |
-          python3 - << 'EOF'
-          import urllib.request
-          import json
-          import os
+          echo "CI is running..."
+          # Add your npm test, go test, etc. here
 
-          def send_discord():
-              webhook_url = os.getenv('DISCORD_WEBHOOK')
-              status = os.getenv('CI_RESULT')
-              role_id = os.getenv('DEV_ROLE_ID')
-              repo = os.getenv('GITHUB_REPOSITORY')
-              branch = os.getenv('GITHUB_REF_NAME')
-              run_id = os.getenv('GITHUB_RUN_ID')
-              actor = os.getenv('GITHUB_ACTOR')
-              sha = os.getenv('GITHUB_SHA')[:7]
-              
-              avatar = os.getenv('AVATAR_URL', 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png')
-              image = os.getenv('EMBED_IMAGE')
-
-              if not webhook_url:
-                  print("Webhook URL missing")
-                  return
-
-              # Color and Status Logic
-              is_fail = status == 'failure'
-              color = 15158332 if is_fail else 3066993 # Red vs Green
-              status_icon = "❌" if is_fail else "✅"
-
-              # The Embed Payload (Mimicking sarisia style)
-              payload = {
-                  "username": "GitHub Actions",
-                  "avatar_url": avatar,
-                  "content": f"🚨 <@&{role_id}> Build Failed!" if is_fail else None,
-                  "embeds": [{
-                      "title": f"{status_icon} CI Pipeline Result: {status.upper()}",
-                      "description": f"Build and test process for **{repo}**",
-                      "url": f"https://github.com/{repo}/actions/runs/{run_id}",
-                      "color": color,
-                      "fields": [
-                          {"name": "Actor", "value": actor, "inline": True},
-                          {"name": "Branch", "value": f"`{branch}`", "inline": True},
-                          {"name": "Commit", "value": f"[`{sha}`](https://github.com/{repo}/commit/{sha})", "inline": True},
-                          {"name": "Workflow Run", "value": f"[#{run_id}](https://github.com/{repo}/actions/runs/{run_id})", "inline": True}
-                      ],
-                      "image": {"url": image} if image else None,
-                      "footer": {"text": f"Repository: {repo}"}
-                  }]
-              }
-
-              req = urllib.request.Request(
-                  webhook_url, 
-                  data=json.dumps(payload).encode('utf-8'), 
-                  headers={'Content-Type': 'application/json'}
-              )
-              
-              try:
-                  with urllib.request.urlopen(req) as response:
-                      print("Notification Sent")
-              except Exception as e:
-                  print(f"Error: {e}")
-
-          if __name__ == "__main__":
-              send_discord()
-          EOF
+      # 3. Enhanced Discord Notification
+      # This runs regardless of success or failure due to if: always()
+      - name: Update Discord Status
+        if: always()
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          status: ${{ job.status }}
+          title: "Build Results: ${{ github.repository }}"
+          description: |
+            **Workflow**: `${{ github.workflow }}`
+            **Event**: `${{ github.event_name }}`
+            **Branch**: `${{ github.ref_name }}`
+            **Commit**: [`${{ github.sha }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})
+          # Optional: Link directly to the logs for one-click debugging
+          url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          color: ${{ job.status == 'success' && '0x28a745' || '0xd73a49' }}
+          username: "GitHub Actions"
