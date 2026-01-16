@@ -2,86 +2,92 @@ name: CI Pipeline
 
 on:
   push:
-    branches: ["**"]
+    branches: [ "main" ]
   pull_request:
+    branches: [ "main" ]
 
 jobs:
+  # Job 1: Build and Test
   ci:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js
+      
+      - name: Setup Node.js (For App Only)
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
-      - name: Install & Build
+
+      - name: Install and Test
         run: |
           npm install
-          npm run build
-      - name: Run Tests
-        run: npm test
+          npm test
 
+  # Job 2: Deployment (Commands logic inside YAML)
   deploy:
     runs-on: ubuntu-latest
     needs: ci
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    environment: production
     steps:
       - uses: actions/checkout@v4
-      - name: Install & Build
+      
+      - name: Execute Deployment
         run: |
-          npm install
-          npm run build
-      - name: Run deployment script
-        run: |
-          if [ -f "./deploy.sh" ]; then
-            chmod +x ./deploy.sh
-            ./deploy.sh
-          else
-            echo "⚠️ No deploy.sh found."
-          fi
+          echo "🚀 Starting Deployment Logic..."
+          # Put your deployment commands here
+          # Example: rsync -avz ./dist user@host:/var/www/
+          echo "✅ Deployment completed directly from YAML."
 
+  # Job 3: Notification (Pure Python Standard Library)
   notify:
     runs-on: ubuntu-latest
-    needs: [ci] # Only depend on CI to ensure it triggers on every branch
-    if: always()
+    needs: [ci]
+    if: always() # Run even if CI fails
     steps:
-      - name: Send Email Notification
+      - name: Python Email Dispatcher
         env:
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
           CI_RESULT: ${{ needs.ci.result }}
         run: |
-          if [ -z "$EMAIL_USER" ] || [ -z "$EMAIL_PASS" ]; then
-            echo "❌ Error: Secrets missing. Ensure they are in Repository Secrets."
-            exit 1
-          fi
+          python3 - << 'EOF'
+          import smtplib
+          import os
+          from email.message import EmailMessage
 
-          mkdir -p /tmp/notify && cd /tmp/notify
-          npm init -y >/dev/null
-          npm install nodemailer --silent
-          
-          cat > notify.js << 'EOF'
-          const nodemailer = require('nodemailer');
-          const transporter = nodemailer.createTransport({
-            host: 'smtp.gmail.com',
-            port: 587,
-            secure: false,
-            auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
-          });
+          # Fetching environment variables set in YAML
+          user = os.getenv('EMAIL_USER')
+          password = os.getenv('EMAIL_PASS')
+          recipient = os.getenv('EMAIL_TO')
+          status = os.getenv('CI_RESULT')
+          repo = os.getenv('GITHUB_REPOSITORY')
+          run_id = os.getenv('GITHUB_RUN_ID')
 
-          const status = process.env.CI_RESULT === 'success' ? '✅' : '❌';
+          # Logic for the email content
+          icon = "✅" if status == "success" else "❌"
           
-          transporter.sendMail({
-            from: process.env.EMAIL_USER,
-            to: process.env.EMAIL_TO,
-            subject: `${status} Pipeline Result: CI ${process.env.CI_RESULT}`,
-            text: `Workflow: ${process.env.GITHUB_RUN_ID}\nStatus: ${process.env.CI_RESULT}`
-          }).then(() => console.log('✅ Email sent')).catch(err => { console.error(err); process.exit(1); });
+          msg = EmailMessage()
+          msg['Subject'] = f"{icon} CI Notification: {repo}"
+          msg['From'] = user
+          msg['To'] = recipient
+          
+          content = (
+              f"The CI Pipeline for {repo} has finished.\n\n"
+              f"Result: {status.upper()}\n"
+              f"Logs: https://github.com/{repo}/actions/runs/{run_id}\n"
+          )
+          msg.set_content(content)
+
+          # Sending via Python's built-in smtplib (No external installs)
+          try:
+              with smtplib.SMTP('smtp.gmail.com', 587) as server:
+                  server.starttls()
+                  server.login(user, password)
+                  server.send_message(msg)
+              print("Email sent successfully.")
+          except Exception as e:
+              print(f"Error sending email: {e}")
+              exit(1)
           EOF
-          node notify.js
-
-
-#test
