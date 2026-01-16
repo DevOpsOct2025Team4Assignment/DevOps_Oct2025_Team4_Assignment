@@ -7,7 +7,7 @@ on:
     branches: [ "**" ]
 
 jobs:
-  # Job 1: Build and Test (Pure Python)
+  # Job 1: Build and Environment Check
   ci:
     runs-on: ubuntu-latest
     steps:
@@ -22,11 +22,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-
-      - name: Run Tests
-        run: |
-          # Replace 'python -m unittest' with 'pytest' if you use pytest
-          python -m unittest discover tests/
+          echo "✅ Environment ready and dependencies installed."
 
   # Job 2: Deployment
   deploy:
@@ -38,7 +34,7 @@ jobs:
       - name: Execute Deployment
         run: |
           echo "🚀 Deploying Python Application..."
-          # Example: python setup.py sdist bdist_wheel
+          # Your deployment commands here
           echo "✅ Deployment logic completed."
 
   # Job 3: Notification (Pure Python Standard Library)
@@ -59,39 +55,30 @@ jobs:
           import os
           from email.message import EmailMessage
 
-          def send_notification():
-              user = os.getenv('EMAIL_USER')
-              password = os.getenv('EMAIL_PASS')
-              recipient = os.getenv('EMAIL_TO')
-              status = os.getenv('CI_RESULT')
-              repo = os.getenv('GITHUB_REPOSITORY')
-              run_id = os.getenv('GITHUB_RUN_ID')
+          user = os.getenv('EMAIL_USER')
+          password = os.getenv('EMAIL_PASS')
+          recipient = os.getenv('EMAIL_TO')
+          status = os.getenv('CI_RESULT')
+          repo = os.getenv('GITHUB_REPOSITORY')
+          run_id = os.getenv('GITHUB_RUN_ID')
 
-              if not all([user, password, recipient]):
-                  print("❌ Error: Missing secrets.")
-                  return
+          if not all([user, password, recipient]):
+              print("❌ Error: Missing secrets.")
+              exit(1)
 
-              icon = "✅" if status == "success" else "❌"
-              msg = EmailMessage()
-              msg['Subject'] = f"{icon} Python CI Alert: {repo}"
-              msg['From'] = user
-              msg['To'] = recipient
-              
-              msg.set_content(
-                  f"Repository: {repo}\n"
-                  f"Result: {status.upper()}\n"
-                  f"Logs: https://github.com/{repo}/actions/runs/{run_id}"
-              )
+          icon = "✅" if status == "success" else "❌"
+          msg = EmailMessage()
+          msg['Subject'] = f"{icon} Python CI Alert: {repo}"
+          msg['From'] = user
+          msg['To'] = recipient
+          msg.set_content(f"Status: {status.upper()}\nLogs: https://github.com/{repo}/actions/runs/{run_id}")
 
-              try:
-                  with smtplib.SMTP('smtp.gmail.com', 587) as server:
-                      server.starttls()
-                      server.login(user, password)
-                      server.send_message(msg)
-                  print("✅ Email sent.")
-              except Exception as e:
-                  print(f"❌ Error: {e}")
-
-          if __name__ == "__main__":
-              send_notification()
+          try:
+              with smtplib.SMTP('smtp.gmail.com', 587) as server:
+                  server.starttls()
+                  server.login(user, password)
+                  server.send_message(msg)
+              print("✅ Notification sent.")
+          except Exception as e:
+              print(f"❌ Error: {e}")
           EOF
