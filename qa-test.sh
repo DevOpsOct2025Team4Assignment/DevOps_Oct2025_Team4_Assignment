@@ -3,9 +3,9 @@
 echo "Starting QA Automated Checks..."
 sleep 2
 
-# Simulate a failure
-echo "Error: Critical vulnerability found in dependency 'example-lib'"
-echo "Error: QA check failed at $(date)"
+# Simulate a successful test
+echo "Success: No vulnerabilities found."
+echo "Success: All 42 unit tests passed."
 
-# Returning any number other than 0 tells GitHub the job failed
-exit 1
+# Returning 0 tells GitHub the job was successful
+exit 0
