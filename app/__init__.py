@@ -62,3 +62,5 @@ def init_db():
 @app.route("/")
 def hello():
     return "Hello!"
+
+from app import admin

@@ -6,15 +6,15 @@ from dotenv import load_dotenv
 from flask import render_template, request, make_response, redirect, url_for, flash
 from werkzeug.security import check_password_hash
 
-# Import 'app' and 'query_db' from your __init__.py
+# Import 'app' and 'query_db' from your package (__init__.py)
 from app import app, query_db
 
-# Load JWT_SECRET from your secret.env
+# Load JWT_SECRET from secret.env (located one level up from /app)
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', 'secret.env'))
 app.config['JWT_SECRET'] = os.getenv("JWT_SECRET")
 app.secret_key = app.config['JWT_SECRET']
 
-# --- JWT DECORATOR FOR ENFORCEMENT ---
+# --- JWT DECORATOR FOR ROLE ENFORCEMENT ---
 def admin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -25,9 +25,7 @@ def admin_required(f):
             return redirect(url_for('login'))
         
         try:
-            # Decode JWT
             data = jwt.decode(token, app.config['JWT_SECRET'], algorithms=['HS256'])
-            # Verify admin role in DB
             user = query_db("SELECT * FROM users WHERE username = ?", (data['username'],), single=True)
             
             if not user or user['is_admin'] != 1:
@@ -43,7 +41,6 @@ def admin_required(f):
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    """Handles GET /login and POST /login"""
     if request.method == "POST":
         username = request.form.get("username")
         password = request.form.get("password")
@@ -51,7 +48,6 @@ def login():
         user = query_db("SELECT * FROM users WHERE username = ?", (username,), single=True)
 
         if user and check_password_hash(user["password_hash"], password):
-            # Create JWT
             payload = {
                 'username': username,
                 'exp': datetime.now(timezone.utc) + timedelta(hours=2)
@@ -62,7 +58,6 @@ def login():
             target = "admin_dashboard" if user["is_admin"] == 1 else "hello"
             response = make_response(redirect(url_for(target)))
             
-            # Set Secure Cookie
             response.set_cookie('access_token', token, httponly=True, samesite='Lax')
             return response
         
@@ -73,15 +68,11 @@ def login():
 @app.route("/admin")
 @admin_required
 def admin_dashboard(current_user):
-    """Enforced Admin Route"""
     return render_template("admin_dashboard.html", user=current_user['username'])
 
 @app.route("/logout")
 def logout():
-    """Handles GET /logout"""
-    # Create redirect response
     response = make_response(redirect(url_for("login")))
-    # Delete the JWT cookie
     response.set_cookie('access_token', '', expires=0)
     flash("You have been logged out.")
     return response
