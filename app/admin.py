@@ -5,13 +5,13 @@ from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 from flask import render_template, request, make_response, redirect, url_for, flash
 from werkzeug.security import check_password_hash
-
+from flask import Blueprint, render_template, request, make_response, redirect, url_for, flash, current_app
 from app import app, query_db
 
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', 'secret.env'))
-app.config['JWT_SECRET'] = os.getenv("JWT_SECRET")
-app.secret_key = app.config['JWT_SECRET']
 
+app.secret_key = app.config['JWT_SECRET']
+auth_bp = Blueprint('auth_bp', __name__)
 # --- JWT DECORATORS ---
 
 def auth_required(f):
@@ -30,27 +30,26 @@ def auth_required(f):
     return decorated
 
 def admin_required(f):
-    """Ensures a valid JWT is present AND role is 'admin'."""
     @wraps(f)
     def decorated(*args, **kwargs):
         token = request.cookies.get('access_token')
         if not token:
             flash("Unauthorized. Please log in.")
-            return redirect(url_for('login'))
+            return redirect(url_for('auth_bp.login')) # Note the blueprint name prefix
         try:
-            data = jwt.decode(token, app.config['JWT_SECRET'], algorithms=['HS256'])
-            # Stateless check: check the role in the JWT payload
+            # Use current_app.config instead of app.config to avoid circular import
+            data = jwt.decode(token, current_app.config['JWT_SECRET'], algorithms=['HS256'])
             if data.get('role') != 'admin':
                 flash("Access denied: Admins only.")
                 return redirect(url_for('hello'))
             return f(data, *args, **kwargs)
         except Exception:
-            return redirect(url_for('login'))
+            return redirect(url_for('auth_bp.login'))
     return decorated
 
 # --- AUTHENTICATION ROUTES ---
 
-@app.route("/login", methods=["GET", "POST"])
+@auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
         username = request.form.get("username")

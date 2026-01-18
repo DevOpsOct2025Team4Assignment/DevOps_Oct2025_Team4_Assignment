@@ -9,7 +9,7 @@ app = Flask(__name__)
 
 DB_PATH = "save.db"
 SCHEMA_PATH = os.path.join(os.path.dirname(__file__), "schema.sql")
-
+app.config['JWT_SECRET'] = os.getenv("JWT_SECRET")
 
 def get_db() -> sqlite3.Connection:
     """Get a database connection."""
@@ -62,5 +62,10 @@ def init_db():
 @app.route("/")
 def hello():
     return "Hello!"
-import app.admin         # Contains login/logout and decorators
-import app.admin_routes   # The new file containing /admin/create_user, etc.
+
+from app import admin
+
+from app.admin_routes import admin_bp
+from app.admin import auth_bp
+app.register_blueprint(admin_bp)
+app.register_blueprint(auth_bp)
