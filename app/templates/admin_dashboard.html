@@ -23,6 +23,11 @@
         
         /* Alert Styles */
         .alert { padding: 15px; margin-bottom: 20px; border-radius: 5px; background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .container { padding: 40px; max-width: 900px; margin: auto; }
+        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .logout-btn { background: #e74c3c; color: white; padding: 8px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; }
+        .logout-btn:hover { background: #c0392b; }
+        .user-tag { color: #bdc3c7; font-size: 0.9rem; }
     </style>
 </head>
 <body>
@@ -32,6 +37,8 @@
         <div>
             <span style="color: #bdc3c7; font-size: 0.9rem;">Welcome, {{ user }} | </span>
             <a href="{{ url_for('auth_bp.logout') }}" class="logout-btn">Logout</a>
+            <span class="user-tag">Welcome, {{ user }} | </span>
+            <a href="/logout" class="logout-btn">Logout</a>
         </div>
     </nav>
 
@@ -92,6 +99,12 @@
                     {% endfor %}
                 </tbody>
             </table>
+        <div class="card">
+            <h1>Dashboard Overview</h1>
+            <p>Access Level: <strong>Full Administrative Rights</strong></p>
+            <hr>
+            <p>Role-based authentication is currently active. Your identity was verified using a <strong>JWT HttpOnly Cookie</strong>.</p>
+            <p>Click the red button in the top right to test <code>GET /logout</code>.</p>
         </div>
     </div>
 
