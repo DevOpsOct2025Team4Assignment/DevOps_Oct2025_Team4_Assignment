@@ -7,7 +7,8 @@ from werkzeug.security import generate_password_hash
 
 app = Flask(__name__)
 
-DB_PATH = "save.db"
+# Use test database if specified, otherwise use default
+DB_PATH = os.getenv("TEST_DB_PATH", "save.db")
 SCHEMA_PATH = os.path.join(os.path.dirname(__file__), "schema.sql")
 app.config['JWT_SECRET'] = os.getenv("JWT_SECRET")
 
