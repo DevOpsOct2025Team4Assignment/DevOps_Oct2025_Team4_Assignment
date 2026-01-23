@@ -15,4 +15,4 @@ CREATE TABLE files (
 );
 
 CREATE INDEX idx_files_user_id ON files(user_id);
-CREATE INDEX idx_files_user_id ON files(user_id);
+
