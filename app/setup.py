@@ -57,6 +57,3 @@ def init_db():
             (generate_password_hash("password"),),
         )
         get_db().commit()
-
-
-
