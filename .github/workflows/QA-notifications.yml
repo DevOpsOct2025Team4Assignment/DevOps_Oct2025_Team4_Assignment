@@ -19,8 +19,7 @@ jobs:
 
       - name: Run SCA (Trivy)
         id: sca_scan
-        uses: aquasec/trivy-action@v2
-        continue-on-error: true # Add this if you want the pipeline to keep going for testing
+        uses: aquasec/trivy-action@0.28.0 # Use a specific version tag
         with:
           scan-type: 'fs'
           scan-ref: '.'
