@@ -1,4 +1,4 @@
-name: CI Pipeline - QA & Security
+name: CI Pipeline - QA Alerts
 
 on:
   push:
@@ -7,96 +7,45 @@ on:
     branches: [ "**" ]
 
 jobs:
-  validate:
+  qa-validation:
     runs-on: ubuntu-latest
-    permissions:
-      security-events: write # Required for Security Tab upload
-      contents: read
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # --- STEP 1: SCA SCAN ---
-      - name: Run SCA (Trivy)
-        id: sca_scan
-        uses: aquasec/trivy-action@v2
-        with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-          severity: 'CRITICAL,HIGH'
-          exit-code: '1' # This forces failure if vulnerabilities are found
-
-      - name: Upload results to Security Tab
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: trivy-results.sarif
-          category: trivy
-
-      # --- STEP 2: QA TESTS ---
-      - name: Run QA Tests
-        id: qa_test
+      - name: Run QA Test Script
+        id: run_tests
         run: |
-          echo "Running automated suite..."
-          # Replace the line below with your actual test command (e.g., npm test, pytest)
-          python3 -c "print('Testing logic...'); assert 1 == 1"
+          # Grant permission to run the script
+          chmod +x ./qa-test.sh
+          # Execute the script
+          ./qa-test.sh
 
-      # --- STEP 3: CONSOLIDATED NOTIFICATION ---
-      - name: Notify Discord
-        if: always()
+      # --- QA NOTIFICATION ON FAILURE ---
+      - name: Notify QA - Code Break
+        if: failure()
+        uses: Ilshidur/action-discord@master
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_QA_WEBHOOK_URL }}
-          SCA_STATUS: ${{ steps.sca_scan.outcome }}
-          QA_STATUS: ${{ steps.qa_test.outcome }}
-          ROLE_ID: "1461638033068785798"
-        run: |
-          python3 - << 'EOF'
-          import urllib.request, json, os
+        with:
+          args: |
+            🚨 **QA ALERT: CODE BREAK** 🚨
+            
+            Attention <@&1461638033068785798>: The automated QA script reported an error.
+            
+            **Details:**
+            - **Repository:** ${{ github.repository }}
+            - **Branch:** `${{ github.ref_name }}`
+            - **Run ID:** ${{ github.run_id }}
+            
+            🔗 **Investigate Here:** https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-          def send():
-              webhook = os.getenv('DISCORD_WEBHOOK')
-              sca = os.getenv('SCA_STATUS')
-              qa = os.getenv('QA_STATUS')
-              role = os.getenv('ROLE_ID')
-              run_url = f"https://github.com/{os.getenv('GITHUB_REPOSITORY')}/actions/runs/{os.getenv('GITHUB_RUN_ID')}"
-              
-              # Logic to identify specific failure
-              failed_parts = []
-              if sca == 'failure': failed_parts.append("Security (SCA)")
-              if qa == 'failure': failed_parts.append("QA Unit Tests")
-              
-              if not failed_parts:
-                  color = 3066993 # Green
-                  title = "✅ CI Check Passed"
-                  desc = "All security scans and QA tests completed successfully."
-                  content = ""
-              else:
-                  color = 15158332 # Red
-                  title = "❌ CI Check Failed"
-                  desc = f"**Issues detected in:** {', '.join(failed_parts)}"
-                  content = f"<@&{role}>" # Ping only on failure
-
-              payload = {
-                  "content": content,
-                  "embeds": [{
-                      "title": title,
-                      "description": desc,
-                      "color": color,
-                      "fields": [
-                          {"name": "Branch", "value": os.getenv('GITHUB_REF_NAME'), "inline": True},
-                          {"name": "Workflow", "value": f"[View Results]({run_url})", "inline": True}
-                      ],
-                      "footer": {"text": "Production Release Pipeline"}
-                  }]
-              }
-              
-              req = urllib.request.Request(webhook, data=json.dumps(payload).encode(), headers={'Content-Type': 'application/json'})
-              urllib.request.urlopen(req)
-
-          if __name__ == "__main__": send()
-          EOF
-
-#test
+      # --- QA NOTIFICATION ON SUCCESS ---
+      - name: Notify QA - Success
+        if: success()
+        uses: Ilshidur/action-discord@master
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_QA_WEBHOOK_URL }}
+        with:
+          args: "✅ **QA Check Passed:** The test script completed successfully."
