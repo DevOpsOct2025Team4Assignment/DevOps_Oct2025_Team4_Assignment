@@ -19,7 +19,7 @@ jobs:
 
       - name: Run SCA (Trivy)
         id: sca_scan
-        uses: aquasecurity/trivy-action@v0.28.0 # Correct org and tag prefix
+        uses: aquasecurity/trivy-action@0.28.0 # Correct org; tag without leading v
         with:
           scan-type: 'fs'
           scan-ref: '.'
