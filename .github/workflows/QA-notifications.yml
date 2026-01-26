@@ -44,6 +44,16 @@ jobs:
           # Replace the line below with your actual test command (e.g., npm test, pytest)
           python3 -c "print('Testing logic...'); assert 1 == 1"
 
+      # --- STEP 2b: ENSURE NOTIFICATION SECRET IS PRESENT ---
+      - name: Validate Discord webhook secret
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_QA_WEBHOOK_URL }}
+        run: |
+          if [ -z "$DISCORD_WEBHOOK" ]; then
+            echo "Required secret DISCORD_QA_WEBHOOK_URL is missing." >&2
+            exit 1
+          fi
+
       # --- STEP 3: CONSOLIDATED NOTIFICATION ---
       - name: Notify Discord
         if: always()
@@ -98,5 +108,3 @@ jobs:
 
           if __name__ == "__main__": send()
           EOF
-
-#test
