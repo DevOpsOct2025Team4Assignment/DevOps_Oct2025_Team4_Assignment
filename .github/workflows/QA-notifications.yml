@@ -17,11 +17,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: 'stable'
-
       - name: Run SCA (Trivy)
         id: sca_scan
         uses: aquasecurity/trivy-action@0.28.0
@@ -42,12 +37,10 @@ jobs:
 
       - name: Run Go SAST (GoSec)
         id: sast_scan
-        run: |
-          go install github.com/securego/gosec/v2/cmd/gosec@latest
-          # Create an empty file first to ensure the upload step doesn't crash
-          touch gosec-results.sarif
-          # Run scan; if it finds issues, the '|| true' ensures the pipeline continues
-          gosec -fmt sarif -out gosec-results.sarif ./... || true
+        uses: securego/gosec@master
+        with:
+          # This generates the report and allows the workflow to continue
+          args: '-fmt sarif -out gosec-results.sarif ./...'
 
       - name: Upload GoSec to Security Tab
         uses: github/codeql-action/upload-sarif@v3
