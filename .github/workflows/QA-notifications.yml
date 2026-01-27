@@ -44,7 +44,9 @@ jobs:
         id: sast_scan
         run: |
           go install github.com/securego/gosec/v2/cmd/gosec@latest
-          # Generate SARIF for the Security Tab; continue on error to allow upload
+          # Create an empty file first to ensure the upload step doesn't crash
+          touch gosec-results.sarif
+          # Run scan; if it finds issues, the '|| true' ensures the pipeline continues
           gosec -fmt sarif -out gosec-results.sarif ./... || true
 
       - name: Upload GoSec to Security Tab
