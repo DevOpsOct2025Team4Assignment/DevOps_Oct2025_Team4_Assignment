@@ -33,6 +33,7 @@ def query_db(query: str, args: tuple | None = (), single: bool = False):
     cur = get_db().execute(query, args)
     rv = cur.fetchall()
     cur.close()
+    get_db().commit()
     return (rv[0] if rv else None) if single else rv
 
 
@@ -44,6 +45,7 @@ def close_db(_):
 
 
 def init_db():
+    """Initialize the database with the schema and default admin user."""
     db = get_db()
 
     with current_app.open_resource("schema.sql") as f:
@@ -59,7 +61,7 @@ def init_db():
 
 @click.command("init-db")
 def init_db_command():
-    """Clear the existing data and create new tables."""
+    """Initialize the database with the schema and default admin user."""
     init_db()
     click.echo("Initialized the database.")
 

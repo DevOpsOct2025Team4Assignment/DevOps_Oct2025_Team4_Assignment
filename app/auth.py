@@ -38,7 +38,7 @@ def login():
         user_role = "admin" if user["is_admin"] == 1 else "user"
 
         payload = {
-            "sub": user["id"],
+            "sub": f"{user['id']}",
             "username": username,
             "role": user_role,
             "exp": datetime.now(timezone.utc) + timedelta(hours=2),
@@ -47,7 +47,7 @@ def login():
         token = jwt.encode(payload, current_app.config["SECRET_KEY"], algorithm="HS256")
 
         # Determine where to send the user
-        target = "admin.dashboard" if user_role == "admin" else "hello"
+        target = "admin.dashboard" if user_role == "admin" else "dashboard.index"
         response = make_response(redirect(url_for(target)))
         response.set_cookie("access_token", token, httponly=True, samesite="Lax")
         return response
@@ -85,12 +85,18 @@ def auth_required(*, admin=False):
 
                 # Role check logic
                 if admin and data.get("role") != "admin":
+                    print("Access denied: Admins only.")
                     flash("Access denied: Admins only.")
                     return redirect(url_for("auth.login"))
 
-                # Pass payload to the route
-                return f(data, *args, **kwargs)
-            except Exception:
+                sub = data.get("sub")
+                if sub is None:
+                    flash("Invalid access token.")
+                    return redirect(url_for("auth.login"))
+
+                return f(int(sub), *args, **kwargs)
+            except Exception as e:
+                print(e)
                 # Catches expired tokens or invalid signatures
                 return redirect(url_for("auth.login"))
 
