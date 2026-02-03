@@ -16,18 +16,19 @@ bp = Blueprint("admin", __name__, url_prefix="/admin")
 
 @bp.route("/")
 @auth_required(admin=True)
-def dashboard(payload):
+def dashboard(user_id: int):
+    current_user = query_db("SELECT * FROM users WHERE id = ?", (user_id,), single=True)
     users = query_db(
         "SELECT id, username, is_admin, created_at FROM users ORDER BY created_at DESC"
     )
     return render_template(
-        "admin_dashboard.html", user=payload["username"], users=users
+        "admin_dashboard.html", user=current_user["username"], users=users
     )
 
 
 @bp.route("/create_user", methods=["POST"])
 @auth_required(admin=True)
-def create_user():
+def create_user(_):
     username = request.form.get("username")
     password = request.form.get("password")
     is_admin = 1 if request.form.get("is_admin") else 0
@@ -51,12 +52,8 @@ def create_user():
 
 @bp.route("/delete_user/<int:user_id>", methods=["POST"])
 @auth_required(admin=True)
-def delete_user(payload, user_id):
-    current_user = query_db(
-        "SELECT id FROM users WHERE username = ?", (payload["username"],), single=True
-    )
-
-    if current_user and current_user["id"] == user_id:
+def delete_user(current_user_id: int, user_id: int):
+    if current_user_id == user_id:
         flash("Security alert: You cannot delete your own account.")
         return redirect(url_for("admin.dashboard"))
 

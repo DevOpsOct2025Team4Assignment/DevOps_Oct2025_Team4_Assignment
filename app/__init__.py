@@ -1,4 +1,5 @@
 import os
+from typing import Any, Mapping
 
 from dotenv import load_dotenv
 from flask import Flask
@@ -6,7 +7,7 @@ from flask import Flask
 load_dotenv()
 
 
-def create_app(test_config=None):
+def create_app(test_config: Mapping[str, Any] | None = None):
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_mapping(
         SECRET_KEY=os.environ.get("SECRET_KEY", "dev"),
@@ -20,10 +21,11 @@ def create_app(test_config=None):
 
     os.makedirs(app.instance_path, exist_ok=True)
 
-    from . import admin, auth, db
+    from . import admin, auth, dashboard, db
 
     db.init_app(app)
     app.register_blueprint(auth.bp)
     app.register_blueprint(admin.bp)
+    app.register_blueprint(dashboard.bp)
 
     return app
