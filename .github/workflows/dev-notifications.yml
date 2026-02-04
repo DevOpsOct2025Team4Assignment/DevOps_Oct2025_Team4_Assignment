@@ -5,13 +5,6 @@ on:
     workflows: ["CI - Flask Unit Tests"]
     types:
       - completed
-    branches:
-      - "**"
-  # Direct triggers for testing on feature branches
-  push:
-    branches: [ "**" ]
-  pull_request:
-    branches: [ "**" ]
 
 jobs:
   notify-devs:
@@ -23,11 +16,11 @@ jobs:
       - name: Send Discord Notification
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_DEV_WEBHOOK_URL }}
-          CI_RESULT: ${{ github.event.workflow_run.conclusion || 'success' }}
+          CI_RESULT: ${{ github.event.workflow_run.conclusion }}
           DEV_ROLE_ID: "1461638107211235401"
           GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_REF_NAME: ${{ github.event.workflow_run.head_branch || github.ref_name }}
-          GITHUB_RUN_ID: ${{ github.event.workflow_run.id || github.run_id }}
-          COMMIT_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
-          COMMIT_MSG: ${{ github.event.workflow_run.head_commit.message || github.event.head_commit.message || 'Workflow Triggered' }}
+          GITHUB_REF_NAME: ${{ github.event.workflow_run.head_branch }}
+          GITHUB_RUN_ID: ${{ github.event.workflow_run.id }}
+          COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
+          COMMIT_MSG: ${{ github.event.workflow_run.head_commit.message }}
         run: python3 notify-dev-discord.py
