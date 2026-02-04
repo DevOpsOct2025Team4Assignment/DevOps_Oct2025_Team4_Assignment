@@ -1,5 +1,6 @@
 import os
 import tempfile
+import threading
 
 import pytest
 from flask import Flask
@@ -42,6 +43,33 @@ def client(app: Flask):
 @pytest.fixture
 def runner(app: Flask):
     return app.test_cli_runner()
+
+
+@pytest.fixture
+def live_server(app: Flask):
+    """Start a live server for E2E testing."""
+    from werkzeug.serving import make_server
+    
+    server = make_server("127.0.0.1", 0, app)
+    thread = threading.Thread(target=server.serve_forever)
+    thread.daemon = True
+    thread.start()
+    
+    class LiveServer:
+        def __init__(self, server):
+            self.server = server
+            self.host = server.host
+            self.port = server.server_port
+        
+        @property
+        def url(self):
+            return f"http://{self.host}:{self.port}"
+    
+    live_server = LiveServer(server)
+    
+    yield live_server
+    
+    server.shutdown()
 
 
 class AuthActions(object):
