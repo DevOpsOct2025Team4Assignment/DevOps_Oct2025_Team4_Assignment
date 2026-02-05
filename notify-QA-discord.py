@@ -63,14 +63,12 @@ def send():
     if not failed_parts:
         # All tests passed - show simple message
         color = 3066993  # Green
-        title = f"✅ **Security & QA Checks Passed in** `{branch}`"
-        desc = f"`{sha}` {commit_msg}\n\nAll scans passed.\n\n[View Details on GitHub]({run_url})"
+        desc = f"✅ **Security & QA Checks Passed in** `{branch}`\n\n`{sha}` {commit_msg}\n\nAll scans passed.\n\n[View Details on GitHub]({run_url})"
         content = ""
     else:
         # Some tests failed - show individual results
         color = 15158332  # Red
-        title = f"🚨 **Security & QA Checks Failed in** `{branch}`"
-        desc = f"`{sha}` {commit_msg}\n\nIssues in: {', '.join(failed_parts)}\n\n" + "\n".join(test_results)
+        desc = f"🚨 **Security & QA Checks Failed in** `{branch}`\n\n`{sha}` {commit_msg}\n\nIssues in: {', '.join(failed_parts)}\n\n" + "\n".join(test_results)
         
         # Add individual test failures if QA tests failed
         if "QA Tests" in failed_parts:
