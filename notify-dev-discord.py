@@ -19,11 +19,11 @@ def send_discord():
     # Logic for Pass/Fail styling
     if status == 'success':
         header = f"✅ **Tests passed in** `{branch}`"
-        footer = "View logs"
+        footer = ""
         color = 3066993 # Green
     else:
         header = f"🚨 **Tests failed in** `{branch}`"
-        footer = f"View logs <@&{role_id}>"
+        footer = f"<@&{role_id}>"
         color = 15158332 # Red
 
     # All content inside the description field of the embed
