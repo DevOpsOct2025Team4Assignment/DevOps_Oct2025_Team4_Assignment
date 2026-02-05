@@ -54,8 +54,8 @@ jobs:
       - name: Run QA Tests
         id: qa_test
         run: |
-          echo "Running automated suite..."
-          python3 -c "assert 1 == 1"
+          pip install pytest
+          python3 -m pytest tests/ -v --tb=short --junit-xml=test-results.xml || true
 
       - name: Notify Discord
         if: always()
@@ -64,6 +64,7 @@ jobs:
           SCA_STATUS: ${{ steps.sca_scan.outcome }}
           SAST_STATUS: ${{ steps.sast_scan.outcome }}
           QA_STATUS: ${{ steps.qa_test.outcome }}
+          TEST_RESULTS_FILE: test-results.xml
           ROLE_ID: "1461638033068785798"
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_RUN_ID: ${{ github.run_id }}
