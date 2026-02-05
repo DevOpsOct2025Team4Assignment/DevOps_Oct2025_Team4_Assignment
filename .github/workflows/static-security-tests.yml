@@ -69,4 +69,6 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_RUN_ID: ${{ github.run_id }}
           GITHUB_REF_NAME: ${{ github.ref_name }}
+          GITHUB_SHA: ${{ github.sha }}
+          COMMIT_MSG: ${{ github.event.head_commit.message || github.event.pull_request.title || 'Manual Update' }}
         run: python3 notify-QA-discord.py
