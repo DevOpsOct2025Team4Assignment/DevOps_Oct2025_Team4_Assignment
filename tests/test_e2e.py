@@ -1,229 +1,170 @@
-"""End-to-end tests for the Flask application using Selenium."""
+"""End-to-end tests for the Flask application using Playwright."""
 import pytest
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.options import Options
-import time
 
 
 pytestmark = pytest.mark.e2e
 
 
-@pytest.fixture(scope="session")
-def chrome_options():
-    """Configure Chrome options for headless testing."""
-    options = Options()
-    options.add_argument("--headless")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-gpu")
-    return options
-
-
-@pytest.fixture
-def driver(chrome_options, live_server):
-    """Initialize Selenium WebDriver."""
-    try:
-        driver = webdriver.Chrome(options=chrome_options)
-    except Exception:
-        pytest.skip("ChromeDriver not available")
-    
-    yield driver
-    driver.quit()
-
-
-@pytest.fixture
-def wait(driver):
-    """WebDriverWait instance for explicit waits."""
-    return WebDriverWait(driver, 10)
-
-
 class TestUserLoginE2E:
     """End-to-end tests for user login workflow."""
     
-    def test_user_login_and_redirect_to_dashboard(self, driver, live_server, wait):
+    @pytest.mark.asyncio
+    async def test_user_login_and_redirect_to_dashboard(self, page, live_server):
         """Test that a regular user can login and is redirected to their dashboard."""
         base_url = live_server.url
-        driver.get(f"{base_url}/login")
+        await page.goto(f"{base_url}/login")
         
         # Verify login page is loaded
-        assert "Login" in driver.page_source or "login" in driver.page_source.lower()
+        content = await page.content()
+        assert "Login" in content or "login" in content.lower()
         
         # Fill in login form
-        username_input = wait.until(
-            EC.presence_of_element_located((By.NAME, "username"))
-        )
-        username_input.send_keys("test user")
-        
-        password_input = driver.find_element(By.NAME, "password")
-        password_input.send_keys("password")
+        await page.fill("input[name='username']", "test user")
+        await page.fill("input[name='password']", "password")
         
         # Submit form
-        submit_button = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
-        submit_button.click()
+        await page.click("button[type='submit']")
         
         # Wait for redirect and verify dashboard page
-        wait.until(EC.presence_of_element_located((By.TAG_NAME, "body")))
-        time.sleep(1)  # Allow redirect to complete
+        await page.wait_for_url("**/dashboard/", timeout=10000)
         
-        assert "/dashboard" in driver.current_url
-        assert driver.get_cookie("access_token") is not None
+        # Check for access token in cookies
+        cookies = await page.context.cookies()
+        cookie_names = [c['name'] for c in cookies]
+        assert "access_token" in cookie_names
     
-    def test_user_logout(self, driver, live_server, wait):
+    @pytest.mark.asyncio
+    async def test_user_logout(self, page, live_server):
         """Test that a user can logout successfully."""
         base_url = live_server.url
         
         # Login first
-        driver.get(f"{base_url}/login")
-        username_input = wait.until(
-            EC.presence_of_element_located((By.NAME, "username"))
-        )
-        username_input.send_keys("test user")
-        
-        password_input = driver.find_element(By.NAME, "password")
-        password_input.send_keys("password")
-        
-        submit_button = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
-        submit_button.click()
-        
-        wait.until(EC.presence_of_element_located((By.TAG_NAME, "body")))
-        time.sleep(1)
+        await page.goto(f"{base_url}/login")
+        await page.fill("input[name='username']", "test user")
+        await page.fill("input[name='password']", "password")
+        await page.click("button[type='submit']")
+        await page.wait_for_url("**/dashboard/", timeout=10000)
         
         # Now logout
-        logout_link = wait.until(
-            EC.element_to_be_clickable((By.XPATH, "//a[contains(text(), 'Logout')]"))
-        )
-        logout_link.click()
+        await page.click("a:has-text('Logout')")
         
-        time.sleep(1)
-        assert "/login" in driver.current_url
-        assert driver.get_cookie("access_token") is None
+        # Wait for redirect to login page
+        await page.wait_for_url("**/login", timeout=10000)
+        
+        cookies = await page.context.cookies()
+        cookie_names = [c['name'] for c in cookies]
+        assert "access_token" not in cookie_names
 
 
 class TestAdminLoginE2E:
     """End-to-end tests for admin login workflow."""
     
-    def test_admin_login_and_redirect_to_admin_dashboard(self, driver, live_server, wait):
+    @pytest.mark.asyncio
+    async def test_admin_login_and_redirect_to_admin_dashboard(self, page, live_server):
         """Test that an admin can login and is redirected to admin dashboard."""
         base_url = live_server.url
-        driver.get(f"{base_url}/login")
+        await page.goto(f"{base_url}/login")
         
         # Verify login page is loaded
-        assert "Login" in driver.page_source or "login" in driver.page_source.lower()
+        content = await page.content()
+        assert "Login" in content or "login" in content.lower()
         
         # Fill in login form with admin credentials
-        username_input = wait.until(
-            EC.presence_of_element_located((By.NAME, "username"))
-        )
-        username_input.send_keys("default admin")
-        
-        password_input = driver.find_element(By.NAME, "password")
-        password_input.send_keys("password")
+        await page.fill("input[name='username']", "default admin")
+        await page.fill("input[name='password']", "password")
         
         # Submit form
-        submit_button = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
-        submit_button.click()
+        await page.click("button[type='submit']")
         
         # Wait for redirect and verify admin dashboard page
-        wait.until(EC.presence_of_element_located((By.TAG_NAME, "body")))
-        time.sleep(1)
+        await page.wait_for_url("**/admin/", timeout=10000)
         
-        assert "/admin" in driver.current_url
-        assert driver.get_cookie("access_token") is not None
+        cookies = await page.context.cookies()
+        cookie_names = [c['name'] for c in cookies]
+        assert "access_token" in cookie_names
     
-    def test_admin_create_user(self, driver, live_server, wait):
+    @pytest.mark.asyncio
+    async def test_admin_create_user(self, page, live_server):
         """Test that an admin can create a new user."""
         base_url = live_server.url
         
         # Login as admin
-        driver.get(f"{base_url}/login")
-        username_input = wait.until(
-            EC.presence_of_element_located((By.NAME, "username"))
-        )
-        username_input.send_keys("default admin")
-        
-        password_input = driver.find_element(By.NAME, "password")
-        password_input.send_keys("password")
-        
-        submit_button = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
-        submit_button.click()
-        
-        wait.until(EC.presence_of_element_located((By.TAG_NAME, "body")))
-        time.sleep(1)
+        await page.goto(f"{base_url}/login")
+        await page.fill("input[name='username']", "default admin")
+        await page.fill("input[name='password']", "password")
+        await page.click("button[type='submit']")
+        await page.wait_for_url("**/admin/", timeout=10000)
         
         # Fill in create user form
         new_username = "e2e_test_user"
         new_password = "test_password_123"
         
-        username_field = wait.until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "input[name='username']"))
-        )
-        username_field.send_keys(new_username)
+        # Wait for the form to be visible and fill it
+        await page.wait_for_selector("input[name='username']", timeout=5000)
+        username_inputs = await page.query_selector_all("input[name='username']")
+        password_inputs = await page.query_selector_all("input[name='password']")
         
-        password_field = driver.find_element(By.CSS_SELECTOR, "input[name='password']")
-        password_field.send_keys(new_password)
+        # Fill the create user form (the second set of inputs on the page)
+        if len(username_inputs) > 0:
+            await username_inputs[0].fill(new_username)
+        if len(password_inputs) > 0:
+            await password_inputs[0].fill(new_password)
         
-        # Submit form
-        create_button = driver.find_element(
-            By.CSS_SELECTOR, "button[type='submit']:last-of-type"
-        )
-        create_button.click()
+        # Submit form (click the create user submit button)
+        buttons = await page.query_selector_all("button.submit-btn")
+        if buttons:
+            await buttons[0].click()
         
-        time.sleep(1)
+        # Wait a moment for form submission
+        await page.wait_for_timeout(1000)
         
         # Verify user was created (should see success message or user in list)
-        page_source = driver.page_source
-        assert "created successfully" in page_source.lower() or new_username in page_source
+        content = await page.content()
+        assert "created successfully" in content.lower() or new_username in content
 
 
 class TestInvalidLoginE2E:
     """End-to-end tests for invalid login scenarios."""
     
-    def test_invalid_credentials(self, driver, live_server, wait):
+    @pytest.mark.asyncio
+    async def test_invalid_credentials(self, page, live_server):
         """Test that invalid credentials show an error."""
         base_url = live_server.url
-        driver.get(f"{base_url}/login")
+        await page.goto(f"{base_url}/login")
         
         # Fill in login form with wrong credentials
-        username_input = wait.until(
-            EC.presence_of_element_located((By.NAME, "username"))
-        )
-        username_input.send_keys("nonexistent_user")
-        
-        password_input = driver.find_element(By.NAME, "password")
-        password_input.send_keys("wrong_password")
+        await page.fill("input[name='username']", "nonexistent_user")
+        await page.fill("input[name='password']", "wrong_password")
         
         # Submit form
-        submit_button = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
-        submit_button.click()
+        await page.click("button[type='submit']")
         
-        time.sleep(1)
+        # Wait a moment for potential redirect or error message
+        await page.wait_for_timeout(1000)
         
         # Should remain on login page
-        assert "/login" in driver.current_url
-        assert driver.get_cookie("access_token") is None
+        assert "/login" in page.url
+        cookies = await page.context.cookies()
+        cookie_names = [c['name'] for c in cookies]
+        assert "access_token" not in cookie_names
     
-    def test_empty_username(self, driver, live_server, wait):
+    @pytest.mark.asyncio
+    async def test_empty_username(self, page, live_server):
         """Test that empty username shows an error."""
         base_url = live_server.url
-        driver.get(f"{base_url}/login")
+        await page.goto(f"{base_url}/login")
         
         # Leave username empty, fill password
-        username_input = wait.until(
-            EC.presence_of_element_located((By.NAME, "username"))
-        )
-        
-        password_input = driver.find_element(By.NAME, "password")
-        password_input.send_keys("password")
+        await page.fill("input[name='password']", "password")
         
         # Submit form
-        submit_button = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
-        submit_button.click()
+        await page.click("button[type='submit']")
         
-        time.sleep(1)
+        # Wait a moment for potential redirect or error message
+        await page.wait_for_timeout(1000)
         
         # Should remain on login page
-        assert "/login" in driver.current_url
-        assert driver.get_cookie("access_token") is None
+        assert "/login" in page.url
+        cookies = await page.context.cookies()
+        cookie_names = [c['name'] for c in cookies]
+        assert "access_token" not in cookie_names

@@ -1,14 +1,28 @@
 import os
 import tempfile
 import threading
+import asyncio
 
 import pytest
 from flask import Flask
 from flask.testing import FlaskClient
 from werkzeug.security import generate_password_hash
+from playwright.async_api import async_playwright
 
 from app import create_app
 from app.db import init_db, query_db
+
+
+@pytest.fixture
+def event_loop():
+    """Create an event loop for async tests."""
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    yield loop
+    loop.close()
 
 
 @pytest.fixture
@@ -56,16 +70,17 @@ def live_server(app: Flask):
     thread.start()
     
     class LiveServer:
-        def __init__(self, server):
+        def __init__(self, server, app):
             self.server = server
             self.host = server.host
             self.port = server.server_port
+            self.app = app
         
         @property
         def url(self):
             return f"http://{self.host}:{self.port}"
     
-    live_server = LiveServer(server)
+    live_server = LiveServer(server, app)
     
     yield live_server
     
@@ -89,3 +104,25 @@ class AuthActions(object):
 @pytest.fixture
 def auth(client: FlaskClient):
     return AuthActions(client)
+
+
+@pytest.fixture
+async def browser(event_loop):
+    """Initialize Playwright browser for async tests."""
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        yield browser
+        await browser.close()
+
+
+@pytest.fixture
+async def page(browser, live_server):
+    """Create a new Playwright page for each async test."""
+    context = await browser.new_context()
+    page = await context.new_page()
+    # Setup default admin user for e2e tests
+    await page.context.add_init_script("""
+        window.localStorage.setItem('test_ready', 'true');
+    """)
+    yield page
+    await context.close()
