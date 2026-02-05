@@ -32,6 +32,9 @@ def send():
     sast_status = os.getenv('SAST_STATUS')
     qa_status = os.getenv('QA_STATUS')
     test_results_file = os.getenv('TEST_RESULTS_FILE', 'test-results.xml')
+    sha = os.getenv('GITHUB_SHA', '0000000')[:7]
+    commit_msg = os.getenv('COMMIT_MSG', 'Manual Update').split('\n')[0]
+    branch = os.getenv('GITHUB_REF_NAME')
     
     # Check if all tests passed
     failed_parts = []
@@ -60,14 +63,14 @@ def send():
     if not failed_parts:
         # All tests passed - show simple message
         color = 3066993  # Green
-        title = "✅ CI Check Passed"
-        desc = "All scans passed."
+        title = f"✅ **Security & QA Checks Passed in** `{branch}`"
+        desc = f"`{sha}` {commit_msg}\n\nAll scans passed.\n\n[View Details on GitHub]({run_url})"
         content = ""
     else:
         # Some tests failed - show individual results
         color = 15158332  # Red
-        title = "❌ CI Check Failed"
-        desc = f"Issues in: {', '.join(failed_parts)}\n\n" + "\n".join(test_results)
+        title = f"🚨 **Security & QA Checks Failed in** `{branch}`"
+        desc = f"`{sha}` {commit_msg}\n\nIssues in: {', '.join(failed_parts)}\n\n" + "\n".join(test_results)
         
         # Add individual test failures if QA tests failed
         if "QA Tests" in failed_parts:
@@ -79,18 +82,14 @@ def send():
                 if len(failures) > 5:
                     desc += f"\n• ... and {len(failures) - 5} more"
         
-        content = f"<@&{os.getenv('ROLE_ID')}>"
+        desc += f"\n\n<@&{os.getenv('ROLE_ID')}>\n\n[View Details on GitHub]({run_url})"
+        content = ""
     
     payload = {
         "content": content, 
         "embeds": [{
-            "title": title, 
             "description": desc, 
-            "color": color, 
-            "fields": [
-                {"name": "Branch", "value": os.getenv('GITHUB_REF_NAME'), "inline": True}, 
-                {"name": "Results", "value": f"[View Log]({run_url})", "inline": True}
-            ]
+            "color": color
         }]
     }
     
