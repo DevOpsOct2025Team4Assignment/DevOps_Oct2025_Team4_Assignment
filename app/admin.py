@@ -63,4 +63,4 @@ def delete_user(current_user_id: int, user_id: int):
     except Exception as e:
         flash(f"Database error: {str(e)}")
 
-    return redirect(url_for("admin.admin"))
+    return redirect(url_for("admin.dashboard"))
