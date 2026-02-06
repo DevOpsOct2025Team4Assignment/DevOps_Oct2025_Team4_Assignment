@@ -41,8 +41,8 @@ jobs:
           # Install bandit with sarif support for Python security scanning
           pip install bandit[sarif]
           # -r: recursive scan, -f: format as sarif, -o: output file
-          # '|| true' allows the workflow to continue to the upload step even if vulnerabilities are found
-          bandit -r . -f sarif -o bandit-results.sarif || true
+          # --exclude: skip the tests directory
+          bandit -r . -f sarif -o bandit-results.sarif --exclude ./tests
 
       - name: Upload Bandit to Security Tab
         uses: github/codeql-action/upload-sarif@v3
