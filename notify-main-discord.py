@@ -13,8 +13,8 @@ def send_discord():
     sha = os.getenv('COMMIT_SHA', '0000000')[:7]
     msg = os.getenv('COMMIT_MSG', 'Main Update').split('\n')[0]
 
-    if not webhook_url:
-        print("❌ Webhook URL missing")
+    if not webhook_url or not webhook_url.startswith("https://"):
+        print("❌ Webhook URL missing or invalid (must be HTTPS)")
         return
 
     # Identify specific context for Production

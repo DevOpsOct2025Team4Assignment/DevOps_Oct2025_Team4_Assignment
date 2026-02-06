@@ -1,5 +1,5 @@
 import urllib.request, json, os
-import xml.etree.ElementTree as ET
+from defusedxml.ElementTree import parse as safe_parse
 
 def parse_test_failures(test_results_file):
     """Parse JUnit XML and return list of failed tests."""
@@ -8,7 +8,7 @@ def parse_test_failures(test_results_file):
         if not os.path.exists(test_results_file):
             return failures
         
-        tree = ET.parse(test_results_file)
+        tree = safe_parse(test_results_file)
         root = tree.getroot()
         
         for testcase in root.findall('.//testcase'):
@@ -24,8 +24,8 @@ def parse_test_failures(test_results_file):
 
 def send():
     webhook = os.getenv('DISCORD_WEBHOOK')
-    if not webhook or not webhook.startswith("http"):
-        print("❌ Error: DISCORD_WEBHOOK is missing or invalid.")
+    if not webhook or not webhook.startswith("https://"):
+        print("❌ Error: DISCORD_WEBHOOK is missing or invalid (must be HTTPS).")
         return
     
     sca_status = os.getenv('SCA_STATUS')
