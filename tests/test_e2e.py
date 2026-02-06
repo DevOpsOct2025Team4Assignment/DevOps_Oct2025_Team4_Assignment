@@ -16,7 +16,8 @@ class TestUserLoginE2E:
         
         # Verify login page is loaded
         content = await page.content()
-        assert "Login" in content or "login" in content.lower()
+        if "Login" not in content and "login" not in content.lower():
+            pytest.fail("Login page not loaded correctly")
         
         # Fill in login form
         await page.fill("input[name='username']", "test user")
@@ -31,7 +32,8 @@ class TestUserLoginE2E:
         # Check for access token in cookies
         cookies = await page.context.cookies()
         cookie_names = [c['name'] for c in cookies]
-        assert "access_token" in cookie_names
+        if "access_token" not in cookie_names:
+            pytest.fail("Access token not found in cookies")
     
     @pytest.mark.asyncio
     async def test_user_logout(self, page, live_server):
@@ -53,7 +55,8 @@ class TestUserLoginE2E:
         
         cookies = await page.context.cookies()
         cookie_names = [c['name'] for c in cookies]
-        assert "access_token" not in cookie_names
+        if "access_token" in cookie_names:
+            pytest.fail("Access token should not be present after logout")
 
 
 class TestAdminLoginE2E:
@@ -67,7 +70,8 @@ class TestAdminLoginE2E:
         
         # Verify login page is loaded
         content = await page.content()
-        assert "Login" in content or "login" in content.lower()
+        if "Login" not in content and "login" not in content.lower():
+            pytest.fail("Login page not loaded correctly")
         
         # Fill in login form with admin credentials
         await page.fill("input[name='username']", "default admin")
@@ -81,7 +85,8 @@ class TestAdminLoginE2E:
         
         cookies = await page.context.cookies()
         cookie_names = [c['name'] for c in cookies]
-        assert "access_token" in cookie_names
+        if "access_token" not in cookie_names:
+            pytest.fail("Access token not found in cookies after admin login")
     
     @pytest.mark.asyncio
     async def test_admin_create_user(self, page, live_server):
@@ -120,7 +125,8 @@ class TestAdminLoginE2E:
         
         # Verify user was created (should see success message or user in list)
         content = await page.content()
-        assert "created successfully" in content.lower() or new_username in content
+        if "created successfully" not in content.lower() and new_username not in content:
+            pytest.fail("User creation could not be verified")
 
 
 class TestInvalidLoginE2E:
@@ -143,10 +149,12 @@ class TestInvalidLoginE2E:
         await page.wait_for_timeout(1000)
         
         # Should remain on login page
-        assert "/login" in page.url
+        if "/login" not in page.url:
+            pytest.fail("Should remain on login page after invalid credentials")
         cookies = await page.context.cookies()
         cookie_names = [c['name'] for c in cookies]
-        assert "access_token" not in cookie_names
+        if "access_token" in cookie_names:
+            pytest.fail("Access token should not be present with invalid credentials")
     
     @pytest.mark.asyncio
     async def test_empty_username(self, page, live_server):
@@ -164,7 +172,9 @@ class TestInvalidLoginE2E:
         await page.wait_for_timeout(1000)
         
         # Should remain on login page
-        assert "/login" in page.url
+        if "/login" not in page.url:
+            pytest.fail("Should remain on login page with empty username")
         cookies = await page.context.cookies()
         cookie_names = [c['name'] for c in cookies]
-        assert "access_token" not in cookie_names
+        if "access_token" in cookie_names:
+            pytest.fail("Access token should not be present with empty username")
