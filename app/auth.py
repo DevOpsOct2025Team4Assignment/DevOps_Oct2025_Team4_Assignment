@@ -47,7 +47,7 @@ def login():
         token = jwt.encode(payload, current_app.config["SECRET_KEY"], algorithm="HS256")
 
         # Determine where to send the user
-        target = "admin.dashboard" if user_role == "admin" else "dashboard.index"
+        target = "admin.dashboard" if user_role == "admin" else "files.view"
         response = make_response(redirect(url_for(target)))
         response.set_cookie("access_token", token, httponly=True, samesite="Lax")
         return response
