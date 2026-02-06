@@ -1,9 +1,6 @@
 """End-to-end tests for the Flask application using Playwright."""
 import pytest
 
-# Test fixtures
-TEST_NEW_USER_PASSWORD = "test_password_123"
-
 pytestmark = pytest.mark.e2e
 
 
@@ -91,7 +88,7 @@ class TestAdminLoginE2E:
             pytest.fail("Access token not found in cookies after admin login")
     
     @pytest.mark.asyncio
-    async def test_admin_create_user(self, page, live_server):
+    async def test_admin_create_user(self, page, live_server, test_user_password):
         """Test that an admin can create a new user."""
         base_url = live_server.url
         
@@ -104,7 +101,7 @@ class TestAdminLoginE2E:
         
         # Fill in create user form
         new_username = "e2e_test_user"
-        new_password = TEST_NEW_USER_PASSWORD
+        new_password = test_user_password
         
         # Wait for the form to be visible and fill it
         await page.wait_for_selector("input[name='username']", timeout=5000)
