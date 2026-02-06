@@ -1,7 +1,6 @@
 import os
 import tempfile
 import threading
-import asyncio
 
 import pytest
 from flask import Flask
@@ -11,23 +10,6 @@ from playwright.async_api import async_playwright
 
 from app import create_app
 from app.db import init_db, query_db
-
-
-@pytest.fixture
-def event_loop(request):
-    """Create an event loop for async tests."""
-    # Only create a new loop if we're running async tests
-    if "asyncio" in request.keywords or "e2e" in request.keywords:
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        yield loop
-        loop.close()
-    else:
-        # For synchronous tests, don't create a loop
-        yield None
 
 
 @pytest.fixture
@@ -112,7 +94,7 @@ def auth(client: FlaskClient):
 
 
 @pytest.fixture
-async def browser(event_loop):
+async def browser():
     """Initialize Playwright browser for async tests."""
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
