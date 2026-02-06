@@ -1,6 +1,8 @@
 """End-to-end tests for the Flask application using Playwright."""
 import pytest
 
+# Test fixtures
+TEST_NEW_USER_PASSWORD = "test_password_123"
 
 pytestmark = pytest.mark.e2e
 
@@ -102,7 +104,7 @@ class TestAdminLoginE2E:
         
         # Fill in create user form
         new_username = "e2e_test_user"
-        new_password = "test_password_123"
+        new_password = TEST_NEW_USER_PASSWORD
         
         # Wait for the form to be visible and fill it
         await page.wait_for_selector("input[name='username']", timeout=5000)
