@@ -1,4 +1,5 @@
 import urllib.request
+import urllib.parse
 import json
 import os
 
@@ -15,6 +16,12 @@ def send_discord():
 
     if not webhook_url or not webhook_url.startswith("https://"):
         print("❌ Webhook URL missing or invalid (must be HTTPS)")
+        return
+    
+    # Validate URL scheme to prevent file:// or custom scheme exploitation
+    parsed_url = urllib.parse.urlparse(webhook_url)
+    if parsed_url.scheme != 'https':
+        print("❌ Error: DISCORD_WEBHOOK must use HTTPS scheme.")
         return
 
     # Identify specific context for Production
@@ -43,7 +50,7 @@ def send_discord():
     )
     
     try:
-        with urllib.request.urlopen(req) as resp:
+        with urllib.request.urlopen(req, timeout=10) as resp:
             print(f"Notification Sent: {resp.status}")
     except Exception as e:
         print(f"❌ Error: {e}")

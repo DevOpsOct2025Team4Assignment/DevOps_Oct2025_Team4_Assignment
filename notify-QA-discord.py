@@ -1,4 +1,4 @@
-import urllib.request, json, os
+import urllib.request, urllib.parse, json, os
 from defusedxml.ElementTree import parse as safe_parse
 
 def parse_test_failures(test_results_file):
@@ -26,6 +26,12 @@ def send():
     webhook = os.getenv('DISCORD_WEBHOOK')
     if not webhook or not webhook.startswith("https://"):
         print("❌ Error: DISCORD_WEBHOOK is missing or invalid (must be HTTPS).")
+        return
+    
+    # Validate URL scheme to prevent file:// or custom scheme exploitation
+    parsed_url = urllib.parse.urlparse(webhook)
+    if parsed_url.scheme != 'https':
+        print("❌ Error: DISCORD_WEBHOOK must use HTTPS scheme.")
         return
     
     sca_status = os.getenv('SCA_STATUS')
@@ -102,7 +108,7 @@ def send():
     )
     
     try:
-        with urllib.request.urlopen(req) as response:
+        with urllib.request.urlopen(req, timeout=10) as response:
             print(f"Successfully notified Discord. Status: {response.status}")
     except Exception as e:
         print(f"❌ Failed to send Discord notification: {e}")
