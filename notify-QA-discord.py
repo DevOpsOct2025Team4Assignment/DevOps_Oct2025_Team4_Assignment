@@ -1,4 +1,6 @@
-import urllib.request, urllib.parse, json, os
+import requests
+import json
+import os
 from defusedxml.ElementTree import parse as safe_parse
 
 def parse_test_failures(test_results_file):
@@ -26,12 +28,6 @@ def send():
     webhook = os.getenv('DISCORD_WEBHOOK')
     if not webhook or not webhook.startswith("https://"):
         print("❌ Error: DISCORD_WEBHOOK is missing or invalid (must be HTTPS).")
-        return
-    
-    # Validate URL scheme to prevent file:// or custom scheme exploitation
-    parsed_url = urllib.parse.urlparse(webhook)
-    if parsed_url.scheme != 'https':
-        print("❌ Error: DISCORD_WEBHOOK must use HTTPS scheme.")
         return
     
     sca_status = os.getenv('SCA_STATUS')
@@ -97,19 +93,15 @@ def send():
         }]
     }
     
-    # Creating request with User-Agent header to avoid 403 Forbidden
-    req = urllib.request.Request(
-        webhook, 
-        data=json.dumps(payload).encode(), 
-        headers={
-            'Content-Type': 'application/json',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
-    )
-    
     try:
-        with urllib.request.urlopen(req, timeout=10) as response:
-            print(f"Successfully notified Discord. Status: {response.status}")
+        response = requests.post(
+            webhook,
+            json=payload,
+            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'},
+            timeout=10
+        )
+        response.raise_for_status()
+        print(f"Successfully notified Discord. Status: {response.status_code}")
     except Exception as e:
         print(f"❌ Failed to send Discord notification: {e}")
 
