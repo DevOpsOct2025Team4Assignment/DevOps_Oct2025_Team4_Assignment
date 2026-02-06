@@ -107,7 +107,7 @@ async def page(browser, live_server):
     """Create a new Playwright page for each async test."""
     context = await browser.new_context()
     page = await context.new_page()
-    # Setup default admin user for e2e tests
+    # Initialize test-ready flag in localStorage
     await page.context.add_init_script("""
         window.localStorage.setItem('test_ready', 'true');
     """)
