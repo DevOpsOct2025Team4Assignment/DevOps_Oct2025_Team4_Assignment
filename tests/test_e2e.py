@@ -89,7 +89,7 @@ class TestAdminLoginE2E:
             pytest.fail("Access token not found in cookies after admin login")
     
     @pytest.mark.asyncio
-    async def test_admin_create_user(self, page, live_server, test_user_password):
+    async def test_admin_create_user(self, page, live_server):
         """Test that an admin can create a new user."""
         base_url = live_server.url
         

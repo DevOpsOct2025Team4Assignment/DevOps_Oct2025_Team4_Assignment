@@ -113,9 +113,3 @@ async def page(browser, live_server):
     """)
     yield page
     await context.close()
-
-
-@pytest.fixture
-def test_user_password():
-    """Test password for user creation in E2E tests."""
-    return "test_password_123"
