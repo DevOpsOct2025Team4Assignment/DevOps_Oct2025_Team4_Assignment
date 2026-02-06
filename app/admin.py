@@ -1,5 +1,8 @@
+from pathlib import Path
+
 from flask import (
     Blueprint,
+    current_app,
     flash,
     redirect,
     render_template,
@@ -58,9 +61,15 @@ def delete_user(current_user_id: int, user_id: int):
         return redirect(url_for("admin.dashboard"))
 
     try:
+        files = query_db("SELECT file_path FROM files WHERE user_id = ?", (user_id,))
         query_db("DELETE FROM users WHERE id = ?", (user_id,))
+
+        for file in files:
+            full_path: Path = Path(current_app.config["FILE_STORE"]) / file["file_path"]
+            full_path.unlink(missing_ok=True)
+
         flash("User account removed.")
     except Exception as e:
-        flash(f"Database error: {str(e)}")
+        flash(f"Error: {str(e)}")
 
     return redirect(url_for("admin.dashboard"))
