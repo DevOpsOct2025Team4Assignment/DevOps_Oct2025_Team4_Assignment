@@ -31,3 +31,16 @@ jobs:
       - name: Run unit tests
         run: |
           pytest -m "not e2e"
+
+      - name: Send Discord Notification
+        if: always()
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_DEV_WEBHOOK_URL }}
+          CI_RESULT: ${{ job.status }}
+          DEV_ROLE_ID: "1461638107211235401"
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          COMMIT_SHA: ${{ github.sha }}
+          COMMIT_MSG: ${{ github.event.head_commit.message || github.event.pull_request.title || 'CI Test Run' }}
+        run: python3 notify-dev-discord.py
