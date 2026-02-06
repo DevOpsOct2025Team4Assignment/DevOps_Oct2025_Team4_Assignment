@@ -1,4 +1,5 @@
 import os
+import shutil
 import tempfile
 
 import pytest
@@ -13,25 +14,35 @@ from app.db import init_db, query_db
 @pytest.fixture
 def app():
     db_fd, db_path = tempfile.mkstemp()
+    file_store = tempfile.mkdtemp()
 
     app = create_app(
         {
             "TESTING": True,
             "DATABASE": db_path,
+            "FILE_STORE": file_store,
         }
     )
 
     with app.app_context():
         init_db()
         query_db(
-            "INSERT INTO users (username, password_hash, is_admin) VALUES (?, ?, ?)",
-            ("test user", generate_password_hash("password"), 0),
+            "INSERT INTO users (username, password_hash, is_admin) VALUES (?, ?, ?), (?, ?, ?)",
+            (
+                "test user",
+                generate_password_hash("password"),
+                0,
+                "test user 2",
+                generate_password_hash("password"),
+                0,
+            ),
         )
 
     yield app
 
     os.close(db_fd)
     os.unlink(db_path)
+    shutil.rmtree(file_store)
 
 
 @pytest.fixture
