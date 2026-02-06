@@ -107,9 +107,5 @@ async def page(browser, live_server):
     """Create a new Playwright page for each async test."""
     context = await browser.new_context()
     page = await context.new_page()
-    # Initialize test-ready flag in localStorage
-    await page.context.add_init_script("""
-        window.localStorage.setItem('test_ready', 'true');
-    """)
     yield page
     await context.close()
