@@ -44,16 +44,6 @@ jobs:
           curl -f http://localhost:5000 || exit 1
           echo "Application is responding"
       
-      - name: Upload ZAP baseline reports
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: zap-baseline-reports
-          path: |
-            report_html.html
-            report_json.json
-            report_md.md
-      
       - name: ZAP Full Scan
         uses: zaproxy/action-full-scan@v0.12.0
         with:
@@ -63,12 +53,3 @@ jobs:
           artifact_name: 'zap-fullscan-scan'
         continue-on-error: true
       
-      - name: Upload ZAP fullscan reports
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: zap-fullscan-reports
-          path: |
-            report_html.html
-            report_json.json
-            report_md.md
