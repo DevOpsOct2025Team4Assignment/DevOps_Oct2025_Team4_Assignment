@@ -57,6 +57,10 @@ jobs:
           pip install pytest
           python3 -m pytest tests/ -v --tb=short --junit-xml=test-results.xml || true
 
+      - name: Install Dependencies for Notifications
+        run: |
+          pip install -r requirements.txt
+
       - name: Notify Discord
         if: always()
         env:
