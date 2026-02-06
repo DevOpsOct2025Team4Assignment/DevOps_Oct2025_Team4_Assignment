@@ -14,15 +14,20 @@ from app.db import init_db, query_db
 
 
 @pytest.fixture
-def event_loop():
+def event_loop(request):
     """Create an event loop for async tests."""
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-    yield loop
-    loop.close()
+    # Only create a new loop if we're running async tests
+    if "asyncio" in request.keywords or "e2e" in request.keywords:
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        yield loop
+        loop.close()
+    else:
+        # For synchronous tests, don't create a loop
+        yield None
 
 
 @pytest.fixture
