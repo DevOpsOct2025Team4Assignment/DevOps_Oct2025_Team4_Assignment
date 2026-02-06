@@ -19,7 +19,7 @@ def test_user_login(client: FlaskClient, app: Flask):
     )
     assert len(response.history) == 1
     assert response.status_code == 200
-    assert response.request.path == url_for("dashboard.index")
+    assert response.request.path == url_for("files.view")
 
     with app.app_context():
         assert (

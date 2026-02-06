@@ -44,6 +44,24 @@
         <a href="{{ url_for('auth.logout') }}">Logout</a>
     </div>
 
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <ul class=flashes>
+        {% for message in messages %}
+        <li>{{ message }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    {% endwith %}
+
+    <div class="upload-section">
+        <h2>Upload New File</h2>
+        <form method="post" action="{{ url_for('files.upload') }}" enctype="multipart/form-data">
+            <input type="file" name="file" required>
+            <button type="submit">Upload</button>
+        </form>
+    </div>
+
     <h2>My Uploaded Files</h2>
 
     {% if files %}
@@ -51,14 +69,23 @@
         <thead>
             <tr>
                 <th>File Name</th>
+                <th>Size</th>
                 <th>Uploaded At</th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody>
             {% for file in files %}
             <tr>
-                <td>{{ file.filename }}</td>
+                <td>{{ file.display_name }}</td>
+                <td>{{ file.size_bytes | format_size }}</td>
                 <td>{{ file.uploaded_at }}</td>
+                <td>
+                    <a href="{{ url_for('files.download', file_id=file.id) }}">Download</a>
+                    <form method="post" action="{{ url_for('files.delete', file_id=file.id) }}" style="display:inline;">
+                        <button type="submit" onclick="return confirm('Are you sure?')">Delete</button>
+                    </form>
+                </td>
             </tr>
             {% endfor %}
         </tbody>

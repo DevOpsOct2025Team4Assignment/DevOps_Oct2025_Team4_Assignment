@@ -9,7 +9,8 @@ CREATE TABLE users (
 CREATE TABLE files (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL REFERENCES users ON DELETE CASCADE,
-    filename TEXT NOT NULL,
+    display_name TEXT NOT NULL,
+    size_bytes INTEGER NOT NULL,
     file_path TEXT NOT NULL,
     uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
