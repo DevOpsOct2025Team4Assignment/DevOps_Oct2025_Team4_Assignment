@@ -29,9 +29,8 @@ jobs:
           pip install -e .
 
       - name: Run unit tests
-        id: unit_tests
         run: |
-          pytest
+          pytest -m "not e2e"
 
       - name: Send Discord Notification
         if: always()
