@@ -1,0 +1,67 @@
+name: E2E - End-to-End Tests
+
+on:
+  push:
+    branches: [ development ]
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    name: Playwright E2E Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest-html
+      
+      - name: Install Playwright browsers
+        run: |
+          playwright install chromium
+      
+      - name: Run E2E tests
+        id: e2e_test
+        run: |
+          rm -f instance/app.db
+          python -m pytest tests/test_e2e.py -v --tb=short -m e2e --html=e2e-report.html --self-contained-html
+        env:
+          FLASK_APP: app
+        continue-on-error: true
+      
+      - name: Upload E2E test report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-test-report
+          path: e2e-report.html
+          retention-days: 30
+      
+      - name: Install Dependencies for Notifications
+        if: always()
+        run: |
+          pip install requests defusedxml
+      
+      - name: Notify Discord
+        if: always()
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_QA_WEBHOOK_URL }}
+          E2E_STATUS: ${{ steps.e2e_test.outcome }}
+          ROLE_ID: "1461638033068785798"
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          GITHUB_SHA: ${{ github.sha }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+        run: python3 notify-QA-discord.py

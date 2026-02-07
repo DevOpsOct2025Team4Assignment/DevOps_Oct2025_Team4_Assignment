@@ -1,0 +1,19 @@
+[project]
+name = "app"
+version = "1.0.0"
+description = "File management app."
+dependencies = [
+    "flask",
+]
+
+[build-system]
+requires = ["flit_core<4"]
+build-backend = "flit_core.buildapi"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "e2e: end-to-end tests using Playwright",
+    "asyncio: marks tests as async (deselect with '-m \"not asyncio\"')",
+]
