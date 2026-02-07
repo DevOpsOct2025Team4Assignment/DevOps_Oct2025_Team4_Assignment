@@ -1,12 +1,55 @@
+
+import jwt
+from flask import current_app
+from datetime import datetime, timedelta, timezone
 import io
 import os
-
 from flask import Flask
 from flask.testing import FlaskClient
 
 from app.db import query_db
 from tests.conftest import AuthActions
 
+def test_admin_create_user(client, auth, app):
+    auth.login(username="default admin", password="password")
+
+    username = "new_employee_2024"
+    response = client.post("/admin/create_user", data={
+        "username": username,
+        "password": "password123",
+        "is_admin": "1"
+    }, follow_redirects=True)
+
+    assert response.status_code == 200
+
+    assert b"created successfully!" in response.data
+    assert username.encode() in response.data
+
+def test_admin_delete_user(client, auth, app):
+    """Verify admin can delete the 'test user' created in conftest.py."""
+    auth.login(username="default admin", password="password")
+
+    with app.app_context():
+        target = query_db("SELECT id FROM users WHERE username = ?", ("test user",), single=True)
+        target_id = target["id"]
+
+    response = client.post(f"/admin/delete_user/{target_id}", follow_redirects=True)
+
+    assert response.status_code == 200
+    assert b"User account removed." in response.data
+
+
+
+def test_admin_prevent_self_deletion(client, auth, app):
+    """Test security logic preventing admin from deleting themselves."""
+    auth.login(username="default admin", password="password")
+
+    with app.app_context():
+        admin = query_db("SELECT id FROM users WHERE username = 'default admin'", single=True)
+        admin_id = admin["id"]
+
+    response = client.post(f"/admin/delete_user/{admin_id}", follow_redirects=True)
+    assert b"Security alert: You cannot delete your own account." in response.data
 
 def test_delete_user_cleans_up_files(
     client: FlaskClient, auth: AuthActions, app: Flask
