@@ -5,25 +5,34 @@ on:
     branches: ["main"]
 
 jobs:
-  zip:
+  release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    if: github.ref_type == 'tag'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Bump version and push tag
+        id: tag_version
+        uses: anothrNick/github-tag-action@1.64.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WITH_V: true
 
       - name: Zip Source Code
         run: zip -r source.zip . -x ".git/*" ".github/*"
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
+        if: github.ref_type == 'tag'
         with:
           files: source.zip
 
   notify-main:
-    needs: zip
+    needs: release
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -49,12 +58,12 @@ jobs:
           GITHUB_RUN_ID: ${{ github.run_id }}
           COMMIT_SHA: ${{ github.sha }}
           EVENT_NAME: ${{ github.event_name }}
-          ZIP_STATUS: ${{ needs.zip.result }}
+          ZIP_STATUS: ${{ needs.release.result }}
           COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: python3 notify-main-discord.py
 
   notify-email:
-    needs: zip
+    needs: release
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -76,7 +85,7 @@ jobs:
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
-          CI_RESULT: ${{ needs.zip.result }}
+          CI_RESULT: ${{ needs.release.result }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_RUN_ID: ${{ github.run_id }}
           GITHUB_REF_NAME: ${{ github.ref_name }}
