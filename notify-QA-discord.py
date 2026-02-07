@@ -33,6 +33,8 @@ def send():
     sca_status = os.getenv('SCA_STATUS')
     sast_status = os.getenv('SAST_STATUS')
     qa_status = os.getenv('QA_STATUS')
+    dast_status = os.getenv('DAST_STATUS')
+    e2e_status = os.getenv('E2E_STATUS')
     test_results_file = os.getenv('TEST_RESULTS_FILE', 'test-results.xml')
     sha = os.getenv('GITHUB_SHA', '0000000')[:7]
     commit_msg = os.getenv('COMMIT_MSG', 'Manual Update').split('\n')[0]
@@ -42,30 +44,47 @@ def send():
     failed_parts = []
     test_results = []
     
-    if sca_status == 'success':
-        test_results.append("✅ SCA (Trivy): Passed")
-    else:
-        test_results.append("❌ SCA (Trivy): Failed")
-        failed_parts.append("SCA")
+    if sca_status:
+        if sca_status == 'success':
+            test_results.append("SCA (Trivy): Passed")
+        else:
+            test_results.append("❌ SCA (Trivy): Failed")
+            failed_parts.append("SCA")
     
-    if sast_status == 'success':
-        test_results.append("✅ SAST (Bandit): Passed")
-    else:
-        test_results.append("❌ SAST (Bandit): Failed")
-        failed_parts.append("SAST")
+    if sast_status:
+        if sast_status == 'success':
+            test_results.append("SAST (Bandit): Passed")
+        else:
+            test_results.append("❌ SAST (Bandit): Failed")
+            failed_parts.append("SAST")
     
-    if qa_status == 'success':
-        test_results.append("✅ QA Tests: Passed")
-    else:
-        test_results.append("❌ QA Tests: Failed")
-        failed_parts.append("QA Tests")
+    if dast_status:
+        if dast_status == 'success':
+            test_results.append("DAST (OWASP ZAP): Passed")
+        else:
+            test_results.append("❌ DAST (OWASP ZAP): Failed")
+            failed_parts.append("DAST")
+    
+    if e2e_status:
+        if e2e_status == 'success':
+            test_results.append("E2E Tests: Passed")
+        else:
+            test_results.append("❌ E2E Tests: Failed")
+            failed_parts.append("E2E Tests")
+    
+    if qa_status:
+        if qa_status == 'success':
+            test_results.append("QA Tests: Passed")
+        else:
+            test_results.append("❌ QA Tests: Failed")
+            failed_parts.append("QA Tests")
     
     run_url = f"https://github.com/{os.getenv('GITHUB_REPOSITORY')}/actions/runs/{os.getenv('GITHUB_RUN_ID')}"
     
     if not failed_parts:
         # All tests passed - show simple message
         color = 3066993  # Green
-        desc = f"✅ **Security & QA Checks Passed in** `{branch}`\n\n`{sha}` {commit_msg}\n\nAll scans passed.\n\n[View Details on GitHub]({run_url})"
+        desc = f"✅ **Security & QA Checks Passed in** `{branch}`\n\n`{sha}` {commit_msg}\n\n" + "\n".join(test_results) + f"\n\n[View Details on GitHub]({run_url})"
         content = ""
     else:
         # Some tests failed - show individual results
