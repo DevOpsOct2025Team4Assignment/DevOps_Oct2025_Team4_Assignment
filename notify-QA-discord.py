@@ -44,40 +44,35 @@ def send():
     failed_parts = []
     test_results = []
     
-    if sca_status:
-        if sca_status == 'success':
-            test_results.append("SCA (Trivy): Passed")
-        else:
-            test_results.append("❌ SCA (Trivy): Failed")
-            failed_parts.append("SCA")
+    if sca_status == 'success':
+        test_results.append("SCA (Trivy): Passed")
+    elif sca_status:
+        test_results.append("❌ SCA (Trivy): Failed")
+        failed_parts.append("SCA")
     
-    if sast_status:
-        if sast_status == 'success':
-            test_results.append("SAST (Bandit): Passed")
-        else:
-            test_results.append("❌ SAST (Bandit): Failed")
-            failed_parts.append("SAST")
+    if sast_status == 'success':
+        test_results.append("SAST (Bandit): Passed")
+    elif sast_status:
+        test_results.append("❌ SAST (Bandit): Failed")
+        failed_parts.append("SAST")
     
-    if dast_status:
-        if dast_status == 'success':
-            test_results.append("DAST (OWASP ZAP): Passed")
-        else:
-            test_results.append("❌ DAST (OWASP ZAP): Failed")
-            failed_parts.append("DAST")
+    if dast_status == 'success':
+        test_results.append("DAST (OWASP ZAP): Passed")
+    elif dast_status:
+        test_results.append("❌ DAST (OWASP ZAP): Failed")
+        failed_parts.append("DAST")
     
-    if e2e_status:
-        if e2e_status == 'success':
-            test_results.append("E2E Tests: Passed")
-        else:
-            test_results.append("❌ E2E Tests: Failed")
-            failed_parts.append("E2E Tests")
+    if e2e_status == 'success':
+        test_results.append("E2E Tests: Passed")
+    elif e2e_status:
+        test_results.append("❌ E2E Tests: Failed")
+        failed_parts.append("E2E Tests")
     
-    if qa_status:
-        if qa_status == 'success':
-            test_results.append("QA Tests: Passed")
-        else:
-            test_results.append("❌ QA Tests: Failed")
-            failed_parts.append("QA Tests")
+    if qa_status == 'success':
+        test_results.append("QA Tests: Passed")
+    elif qa_status:
+        test_results.append("❌ QA Tests: Failed")
+        failed_parts.append("QA Tests")
     
     run_url = f"https://github.com/{os.getenv('GITHUB_REPOSITORY')}/actions/runs/{os.getenv('GITHUB_RUN_ID')}"
     
