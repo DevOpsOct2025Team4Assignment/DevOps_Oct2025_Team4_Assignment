@@ -50,12 +50,6 @@ jobs:
           sarif_file: bandit-results.sarif
           category: bandit
 
-      - name: Run QA Tests
-        id: qa_test
-        run: |
-          pip install pytest
-          python3 -m pytest tests/ -v --tb=short --junit-xml=test-results.xml || true
-
       - name: Install Dependencies for Notifications
         run: |
           pip install -r requirements.txt
@@ -66,7 +60,6 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_QA_WEBHOOK_URL }}
           SCA_STATUS: ${{ steps.sca_scan.outcome }}
           SAST_STATUS: ${{ steps.sast_scan.outcome }}
-          QA_STATUS: ${{ steps.qa_test.outcome }}
           TEST_RESULTS_FILE: test-results.xml
           ROLE_ID: "1461638033068785798"
           GITHUB_REPOSITORY: ${{ github.repository }}

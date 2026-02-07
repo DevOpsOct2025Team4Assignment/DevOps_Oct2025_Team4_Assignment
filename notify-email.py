@@ -17,7 +17,7 @@ if not all([user, password, recipient]):
     exit(1)
 
 # Status-based styling
-if status == "success":
+if status and status.lower() == "success":
     icon = "✅"
     status_text = "PASSED"
 else:

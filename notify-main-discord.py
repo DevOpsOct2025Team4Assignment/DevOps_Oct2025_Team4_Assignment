@@ -12,6 +12,7 @@ def send_discord():
     tag = os.getenv('RELEASE_TAG')
     sha = os.getenv('COMMIT_SHA', '0000000')[:7]
     msg = os.getenv('COMMIT_MSG', 'Main Update').split('\n')[0]
+    zip_status = os.getenv('ZIP_STATUS', 'unknown').lower()
 
     if not webhook_url or not webhook_url.startswith("https://"):
         print("❌ Webhook URL missing or invalid (must be HTTPS)")
@@ -21,12 +22,18 @@ def send_discord():
     context = f"🚀 **Release** `{tag}`" if event == 'release' else f"🛠️ **Main Branch**"
     log_url = f"https://github.com/{repo}/actions/runs/{run_id}"
     
-    header = f"✅ **Main Release Notification**\nContext: {context}"
-    footer = f"View logs <@&{role_id}>"
-    color = 3066993 # Green
+    # Status-based styling
+    if zip_status == 'success':
+        icon = "✅"
+        color = 3066993  # Green
+    else:
+        icon = "❌"
+        color = 15158332  # Red
+    
+    header = f"{icon} **Main Release Notification**\nContext: {context}"
 
     # Combine all text into the card description
-    full_description = f"{header}\n\n`{sha}` {msg}\n\n{footer}\n\n[Open Workflow Details]({log_url})"
+    full_description = f"{header}\n\n`{sha}` {msg}\n\n[Open Workflow Details]({log_url})\n\n@everyone"
 
     payload = {
         "embeds": [{
