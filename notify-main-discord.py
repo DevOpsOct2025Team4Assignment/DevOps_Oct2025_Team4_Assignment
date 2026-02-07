@@ -31,6 +31,10 @@ def send_discord():
         icon = "⏭️"
         status_text = "SKIPPED"
         color = 10070709  # Gray
+    elif zip_status == 'cancelled':
+        icon = "🚫"
+        status_text = "CANCELLED"
+        color = 9807270  # Gray
     elif zip_status == 'failure':
         icon = "❌"
         status_text = "FAILED"
