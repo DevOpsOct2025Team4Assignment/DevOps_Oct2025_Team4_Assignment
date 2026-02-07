@@ -45,6 +45,7 @@ jobs:
           echo "Application is responding"
       
       - name: ZAP Full Scan
+        id: dast_scan
         uses: zaproxy/action-full-scan@v0.12.0
         with:
           target: 'http://localhost:5000'
@@ -53,3 +54,20 @@ jobs:
           artifact_name: 'zap-fullscan-scan'
         continue-on-error: true
       
+      - name: Install Dependencies for Notifications
+        if: always()
+        run: |
+          pip install requests defusedxml
+      
+      - name: Notify Discord
+        if: always()
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_QA_WEBHOOK_URL }}
+          DAST_STATUS: ${{ steps.dast_scan.outcome }}
+          ROLE_ID: "1461638033068785798"
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          GITHUB_SHA: ${{ github.sha }}
+          COMMIT_MSG: ${{ github.event.head_commit.message || github.event.pull_request.title || 'Manual Update' }}
+        run: python3 notify-QA-discord.py

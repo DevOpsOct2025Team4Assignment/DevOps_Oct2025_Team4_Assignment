@@ -34,6 +34,7 @@ jobs:
           playwright install chromium
       
       - name: Run E2E tests
+        id: e2e_test
         run: |
           rm -f instance/app.db
           python -m pytest tests/test_e2e.py -v --tb=short -m e2e --html=e2e-report.html --self-contained-html
@@ -48,3 +49,21 @@ jobs:
           name: e2e-test-report
           path: e2e-report.html
           retention-days: 30
+      
+      - name: Install Dependencies for Notifications
+        if: always()
+        run: |
+          pip install requests defusedxml
+      
+      - name: Notify Discord
+        if: always()
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_QA_WEBHOOK_URL }}
+          E2E_STATUS: ${{ steps.e2e_test.outcome }}
+          ROLE_ID: "1461638033068785798"
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          GITHUB_SHA: ${{ github.sha }}
+          COMMIT_MSG: ${{ github.event.head_commit.message || github.event.pull_request.title || 'Manual Update' }}
+        run: python3 notify-QA-discord.py
