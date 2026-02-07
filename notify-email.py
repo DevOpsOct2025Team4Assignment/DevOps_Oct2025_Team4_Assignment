@@ -20,7 +20,13 @@ if not all([user, password, recipient]):
 if status and status.lower() == "success":
     icon = "✅"
     status_text = "PASSED"
-else:
+elif status and status.lower() == "skipped":
+    icon = "⏭️"
+    status_text = "SKIPPED"
+elif status and status.lower() == "cancelled":
+    icon = "🚫"
+    status_text = "CANCELLED"
+elif status and status.lower() == "failure":
     icon = "❌"
     status_text = "FAILED"
 
