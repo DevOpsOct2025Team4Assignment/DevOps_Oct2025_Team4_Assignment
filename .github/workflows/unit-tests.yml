@@ -2,12 +2,9 @@ name: CI - Flask Unit Tests
 
 on:
   push:
-    branches:
-      - development
-      - "**/**"
-  pull_request:
-    branches:
-      - development
+    branches-ignore:
+      - main
+
 
 jobs:
   test:
@@ -42,5 +39,5 @@ jobs:
           GITHUB_REF_NAME: ${{ github.ref_name }}
           GITHUB_RUN_ID: ${{ github.run_id }}
           COMMIT_SHA: ${{ github.sha }}
-          COMMIT_MSG: ${{ github.event.head_commit.message || github.event.pull_request.title || 'CI Test Run' }}
+          COMMIT_MSG: ${{ github.event.head_commit.message}}
         run: python3 notify-dev-discord.py
