@@ -33,7 +33,7 @@ def send_discord():
     header = f"{icon} **Main Release Notification**\nContext: {context}"
 
     # Combine all text into the card description
-    full_description = f"{header}\n\n`{sha}` {msg}\n\n[Open Workflow Details]({log_url})\n\n<@&{role_id}>"
+    full_description = f"{header}\n\n`{sha}` {msg}\n\n[Open Workflow Details]({log_url})\n\n@everyone"
 
     payload = {
         "embeds": [{
