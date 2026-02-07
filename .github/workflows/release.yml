@@ -5,6 +5,22 @@ on:
     branches: [ "main" ]
 
 jobs:
+  zip:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Zip Source Code
+        run: zip -r source.zip . -x ".git/*" ".github/*"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: source.zip
+
   notify-main:
     runs-on: ubuntu-latest
     steps:
