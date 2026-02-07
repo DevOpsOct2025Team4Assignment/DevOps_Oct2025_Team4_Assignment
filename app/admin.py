@@ -1,5 +1,5 @@
 from pathlib import Path
-
+from app.devops_logger import log_security_event
 from flask import (
     Blueprint,
     current_app,
@@ -31,12 +31,13 @@ def dashboard(user_id: int):
 
 @bp.route("/create_user", methods=["POST"])
 @auth_required(admin=True)
-def create_user(_):
+def create_user(current_user_id: int):
     username = request.form.get("username")
     password = request.form.get("password")
     is_admin = 1 if request.form.get("is_admin") else 0
 
     if not username or not password:
+        log_security_event("VALIDATION_FAIL", f"Admin {current_user_id} failed user creation: Missing fields.")
         flash("Username and password are required.")
         return redirect(url_for("admin.dashboard"))
 
@@ -46,8 +47,10 @@ def create_user(_):
             "INSERT INTO users (username, password_hash, is_admin) VALUES (?, ?, ?)",
             (username, password_hash, is_admin),
         )
+        log_security_event("ADMIN_ACTION", f"Admin {current_user_id} created user: {username} (Admin: {is_admin})")
         flash(f"User '{username}' created successfully!")
     except Exception as e:
+        log_security_event("DATABASE_ERROR", f"User creation failed for {username}: {str(e)}")
         flash(f"Error: {str(e)}")
 
     return redirect(url_for("admin.dashboard"))
@@ -57,6 +60,7 @@ def create_user(_):
 @auth_required(admin=True)
 def delete_user(current_user_id: int, user_id: int):
     if current_user_id == user_id:
+        log_security_event("SECURITY_ALERT", f"Admin {current_user_id} attempted to delete themselves.")
         flash("Security alert: You cannot delete your own account.")
         return redirect(url_for("admin.dashboard"))
 
@@ -67,9 +71,11 @@ def delete_user(current_user_id: int, user_id: int):
         for file in files:
             full_path: Path = Path(current_app.config["FILE_STORE"]) / file["file_path"]
             full_path.unlink(missing_ok=True)
-
+        
+        log_security_event("ADMIN_ACTION", f"User {user_id} and associated files deleted by Admin {current_user_id}")
         flash("User account removed.")
     except Exception as e:
+        log_security_event("DATABASE_ERROR", f"Deletion of user {user_id} failed: {str(e)}")
         flash(f"Error: {str(e)}")
-
+        
     return redirect(url_for("admin.dashboard"))
