@@ -25,12 +25,18 @@ def send_discord():
     # Status-based styling
     if zip_status == 'success':
         icon = "✅"
+        status_text = "PASSED"
         color = 3066993  # Green
-    else:
+    elif zip_status == 'skipped':
+        icon = "⏭️"
+        status_text = "SKIPPED"
+        color = 10070709  # Gray
+    elif zip_status == 'failure':
         icon = "❌"
+        status_text = "FAILED"
         color = 15158332  # Red
     
-    header = f"{icon} **Main Release Notification**\nContext: {context}"
+    header = f"{icon} **Main Release Notification - {status_text}**\nContext: {context}"
 
     # Combine all text into the card description
     full_description = f"{header}\n\n`{sha}` {msg}\n\n[Open Workflow Details]({log_url})\n\n@everyone"
