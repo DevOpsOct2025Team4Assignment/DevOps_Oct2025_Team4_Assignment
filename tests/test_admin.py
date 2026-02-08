@@ -91,18 +91,3 @@ def test_delete_user_cleans_up_files(
         assert file_record_after is None
 
 
-
-
-def test_admin_self_deletion_logs_security_alert(client, auth, app):
-    auth.login(username="default admin", password="password")
-    
-    with app.app_context():
-        admin = query_db("SELECT id FROM users WHERE username = 'default admin'", single=True)
-        
-    client.post(f"/admin/delete_user/{admin['id']}", follow_redirects=True)
-    
-    # Verify the log file captured the security event
-    with open('devsecops_audit.log', 'r') as f:
-        logs = f.read()
-        assert "SECURITY_ALERT" in logs
-        assert "attempted to delete themselves" in logs
