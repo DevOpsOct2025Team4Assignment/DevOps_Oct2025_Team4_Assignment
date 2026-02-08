@@ -1,9 +1,0 @@
-2026-02-07 16:36:07,406 | INFO | ADMIN_ACTION | User 2 deleted by Admin 1
-2026-02-07 16:36:07,795 | INFO | SECURITY_ALERT | Admin 1 attempted to delete themselves.
-2026-02-07 16:36:08,337 | INFO | ADMIN_ACTION | User 2 deleted by Admin 1
-2026-02-07 16:36:08,722 | INFO | SECURITY_ALERT | Admin 1 attempted to delete themselves.
-2026-02-07 16:44:43,287 | INFO | ADMIN_ACTION | Admin 1 created user: new_employee_2024 (Admin: 1)
-2026-02-07 16:44:43,686 | INFO | ADMIN_ACTION | User 2 and associated files deleted by Admin 1
-2026-02-07 16:44:44,074 | INFO | SECURITY_ALERT | Admin 1 attempted to delete themselves.
-2026-02-07 16:44:44,619 | INFO | ADMIN_ACTION | User 2 and associated files deleted by Admin 1
-2026-02-07 16:44:45,024 | INFO | SECURITY_ALERT | Admin 1 attempted to delete themselves.
