@@ -89,5 +89,3 @@ def test_delete_user_cleans_up_files(
             "SELECT * FROM files WHERE id = ?", (file_record["id"],), single=True
         )
         assert file_record_after is None
-
-

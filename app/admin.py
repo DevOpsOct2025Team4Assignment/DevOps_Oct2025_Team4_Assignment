@@ -1,4 +1,5 @@
 from pathlib import Path
+
 from flask import (
     Blueprint,
     current_app,
@@ -30,13 +31,12 @@ def dashboard(user_id: int):
 
 @bp.route("/create_user", methods=["POST"])
 @auth_required(admin=True)
-def create_user(current_user_id: int):
+def create_user(_):
     username = request.form.get("username")
     password = request.form.get("password")
     is_admin = 1 if request.form.get("is_admin") else 0
 
     if not username or not password:
-        
         flash("Username and password are required.")
         return redirect(url_for("admin.dashboard"))
 
@@ -46,10 +46,8 @@ def create_user(current_user_id: int):
             "INSERT INTO users (username, password_hash, is_admin) VALUES (?, ?, ?)",
             (username, password_hash, is_admin),
         )
-       
         flash(f"User '{username}' created successfully!")
     except Exception as e:
-        
         flash(f"Error: {str(e)}")
 
     return redirect(url_for("admin.dashboard"))
@@ -69,11 +67,9 @@ def delete_user(current_user_id: int, user_id: int):
         for file in files:
             full_path: Path = Path(current_app.config["FILE_STORE"]) / file["file_path"]
             full_path.unlink(missing_ok=True)
-        
-        
+
         flash("User account removed.")
     except Exception as e:
-        
         flash(f"Error: {str(e)}")
-        
+
     return redirect(url_for("admin.dashboard"))
