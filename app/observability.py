@@ -28,10 +28,6 @@ def initialize_logging(app):
         Captures metadata for every request in Common Log Format.
         """
       
-        if request.path.startswith('/static'):
-            return response
-
-
         username = "-"
         token = request.cookies.get("access_token")
         if token:
@@ -57,3 +53,4 @@ def initialize_logging(app):
         get_audit_logger().info(clf_line)
 
         return response
+    
