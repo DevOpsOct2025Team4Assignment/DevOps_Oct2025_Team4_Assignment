@@ -34,4 +34,7 @@ def create_app(test_config: Mapping[str, Any] | None = None):
 
     app.jinja_env.filters["format_size"] = format_size
 
+    from .observability import initialize_logging
+    initialize_logging(app)
+
     return app
