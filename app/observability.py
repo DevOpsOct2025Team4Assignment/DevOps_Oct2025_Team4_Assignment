@@ -42,7 +42,7 @@ def initialize_logging(app):
 
                 username = json.dumps(raw_username) 
             except Exception:
-                username = "INVALID_TOKEN"
+                username = "-"
 
 
         ip = request.remote_addr or "127.0.0.1"
