@@ -1,0 +1,5 @@
+aws_region       = "us-east-1"
+project_name     = "file-manager"
+instance_type    = "t3.micro"
+flask_secret_key = "CHANGE_ME"
+ssh_public_key   = "ssh-rsa AAAAB3NzaC1yc2EAAAA..."
