@@ -13,6 +13,7 @@ def send_discord():
     sha = os.getenv('COMMIT_SHA', '0000000')[:7]
     msg = os.getenv('COMMIT_MSG', 'Main Update').split('\n')[0]
     zip_status = os.getenv('ZIP_STATUS', 'unknown').lower()
+    deployment_status = os.getenv('DEPLOYMENT_STATUS', 'unknown').lower()
 
     if not webhook_url or not webhook_url.startswith("https://"):
         print("❌ Webhook URL missing or invalid (must be HTTPS)")
@@ -22,7 +23,7 @@ def send_discord():
     context = f"🚀 **Release** `{tag}`" if event == 'release' else f"🛠️ **Main Branch**"
     log_url = f"https://github.com/{repo}/actions/runs/{run_id}"
     
-    # Status-based styling
+    # status-based styling
     if zip_status == 'success':
         icon = "✅"
         status_text = "PASSED"
@@ -40,10 +41,24 @@ def send_discord():
         status_text = "FAILED"
         color = 15158332  # Red
     
+    # Get deployment status icon
+    if deployment_status == 'success':
+        deploy_icon = "✅"
+        deploy_text = "PASSED"
+    elif deployment_status == 'skipped':
+        deploy_icon = "⏭️"
+        deploy_text = "SKIPPED"
+    elif deployment_status == 'cancelled':
+        deploy_icon = "🚫"
+        deploy_text = "CANCELLED"
+    elif deployment_status == 'failure':
+        deploy_icon = "❌"
+        deploy_text = "FAILED"
+    
     header = f"{icon} **Main Release Notification - {status_text}**\nContext: {context}"
 
     # Combine all text into the card description
-    full_description = f"{header}\n\n`{sha}` {msg}\n\n[Open Workflow Details]({log_url})\n\n@everyone"
+    full_description = f"{header}\n\n`{sha}` {msg}\n\n**Release:** {icon} {status_text}\n**Deployment:** {deploy_icon} {deploy_text}\n\n[Open Workflow Details]({log_url})\n\n@everyone"
 
     payload = {
         "embeds": [{
