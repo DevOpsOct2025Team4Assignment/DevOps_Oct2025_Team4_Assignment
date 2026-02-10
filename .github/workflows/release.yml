@@ -40,6 +40,7 @@ jobs:
     name: Deploy to AWS EC2
     needs: release
     runs-on: ubuntu-latest
+    environment: production
     permissions:
       id-token: write
       contents: read
