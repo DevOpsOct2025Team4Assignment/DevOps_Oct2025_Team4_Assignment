@@ -54,6 +54,9 @@ def upload(user_id: int):
         flash("File uploaded successfully")
         return redirect(url_for("files.view"))
 
+    flash("No file data to upload")
+    return redirect(url_for("files.view"))
+
 
 @bp.route("/download/<int:file_id>", methods=["GET"])
 @auth_required()
