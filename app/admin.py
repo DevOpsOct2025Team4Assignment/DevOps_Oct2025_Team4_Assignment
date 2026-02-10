@@ -21,12 +21,12 @@ bp = Blueprint("admin", __name__, url_prefix="/admin")
 @auth_required(admin=True)
 def dashboard(user_id: int):
     current_user = query_db("SELECT * FROM users WHERE id = ?", (user_id,), single=True)
-    users = query_db(
-        "SELECT id, username, is_admin, created_at FROM users ORDER BY created_at DESC"
-    )
-    return render_template(
-        "admin_dashboard.html", user=current_user["username"], users=users
-    )
+    if not current_user:
+        flash("User not found")
+        return redirect(url_for("auth.logout"))
+
+    users = query_db("SELECT id, username, is_admin, created_at FROM users ORDER BY created_at DESC")
+    return render_template("admin_dashboard.html", user=current_user["username"], users=users)
 
 
 @bp.route("/create_user", methods=["POST"])
