@@ -23,7 +23,9 @@ bp = Blueprint("files", __name__, url_prefix="/dashboard")
 @auth_required()
 def view(user_id: int):
     files = query_db("SELECT * FROM files WHERE user_id = ?", (user_id,))
-    return render_template("user_dashboard.html", files=files)
+    user = query_db("SELECT is_admin FROM users WHERE id = ?", (user_id,), single=True)
+    is_admin = user["is_admin"] == 1 if user else False
+    return render_template("user_dashboard.html", files=files, is_admin=is_admin)
 
 
 @bp.route("/upload", methods=["POST"])

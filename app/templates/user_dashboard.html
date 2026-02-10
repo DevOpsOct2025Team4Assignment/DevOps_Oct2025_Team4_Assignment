@@ -1,16 +1,49 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>User Dashboard</title>
+    <meta charset="UTF-8">
+    <title>File management</title>
     <style>
         body {
-            font-family: sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            background-color: #f4f7f6;
+        }
+
+        .navbar {
+            background: #2c3e50;
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 50px;
+        }
+
+        .container {
+            padding: 40px;
+            max-width: 1000px;
+            margin: auto;
+        }
+
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .logout-btn {
+            background: #e74c3c;
+            color: white;
+            padding: 8px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+
+        .logout-btn:hover {
+            background: #c0392b;
         }
 
         table {
@@ -22,77 +55,160 @@
         th,
         td {
             text-align: left;
-            padding: 8px;
-            border-bottom: 1px solid #ddd;
+            padding: 12px;
+            border-bottom: 1px solid #eee;
         }
 
         th {
-            background-color: #f2f2f2;
+            background-color: #f8f9fa;
         }
 
-        .header {
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+        }
+
+        input[type="file"]::file-selector-button {
+            background: #2c3e50;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        input[type="file"]::file-selector-button:hover {
+            background: #34495e;
+        }
+
+        .submit-btn {
+            background: #2ecc71;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .delete-btn {
+            color: #e74c3c;
+            border: none;
+            background: none;
+            cursor: pointer;
+        }
+
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .nav-right {
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            gap: 20px;
+        }
+
+        .nav-link {
+            color: white;
+            text-decoration: none;
+            padding: 8px 20px;
+            border-radius: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        a {
+            color: #2c3e50;
+            text-decoration: none;
         }
     </style>
 </head>
 
 <body>
-    <div class="header">
-        <h1>User Dashboard</h1>
-        <a href="{{ url_for('auth.logout') }}">Logout</a>
-    </div>
 
-    {% with messages = get_flashed_messages() %}
-    {% if messages %}
-    <ul class=flashes>
+    <nav class="navbar">
+        <div><strong>File management</strong></div>
+        <div class="nav-right">
+            {% if is_admin %}
+            <a href="{{ url_for('admin.dashboard') }}" class="nav-link">Admin</a>
+            {% endif %}
+            <a href="{{ url_for('auth.logout') }}" class="logout-btn">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
         {% for message in messages %}
-        <li>{{ message }}</li>
+        <div class="alert">{{ message }}</div>
         {% endfor %}
-    </ul>
-    {% endif %}
-    {% endwith %}
+        {% endif %}
+        {% endwith %}
 
-    <div class="upload-section">
-        <h2>Upload New File</h2>
-        <form method="post" action="{{ url_for('files.upload') }}" enctype="multipart/form-data">
-            <input type="file" name="file" required>
-            <button type="submit">Upload</button>
-        </form>
+        <div class="card">
+            <h3>Upload file</h3>
+            <form method="post" action="{{ url_for('files.upload') }}" enctype="multipart/form-data">
+                <div class="form-group">
+                    <input type="file" name="file" required>
+                </div>
+                <button type="submit" class="submit-btn">Upload</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h3>My files</h3>
+
+            {% if files %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>File name</th>
+                        <th>Size</th>
+                        <th>Uploaded at</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for file in files %}
+                    <tr>
+                        <td>{{ file.display_name }}</td>
+                        <td>{{ file.size_bytes | format_size }}</td>
+                        <td>{{ file.uploaded_at }}</td>
+                        <td>
+                            <a href="{{ url_for('files.download', file_id=file.id) }}">Download</a>
+                            <form method="post" action="{{ url_for('files.delete', file_id=file.id) }}" style="display:inline;">
+                                <button type="submit" class="delete-btn" onclick="return confirm('Are you sure?')">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p>No files uploaded yet.</p>
+            {% endif %}
+        </div>
     </div>
 
-    <h2>My Uploaded Files</h2>
+</body>
 
-    {% if files %}
-    <table>
-        <thead>
-            <tr>
-                <th>File Name</th>
-                <th>Size</th>
-                <th>Uploaded At</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for file in files %}
-            <tr>
-                <td>{{ file.display_name }}</td>
-                <td>{{ file.size_bytes | format_size }}</td>
-                <td>{{ file.uploaded_at }}</td>
-                <td>
-                    <a href="{{ url_for('files.download', file_id=file.id) }}">Download</a>
-                    <form method="post" action="{{ url_for('files.delete', file_id=file.id) }}" style="display:inline;">
-                        <button type="submit" onclick="return confirm('Are you sure?')">Delete</button>
-                    </form>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p>No files uploaded yet.</p>
-    {% endif %}
+</html>
 </body>
 
 </html>
